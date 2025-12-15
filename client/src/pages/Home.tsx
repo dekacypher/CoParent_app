@@ -1,8 +1,9 @@
 import Layout from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MOCK_EVENTS } from "@/lib/mockData";
-import { format, isSameDay } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { getEvents } from "@/lib/api";
+import { format, isSameDay, parseISO } from "date-fns";
 import { Calendar as CalendarIcon, MapPin, Sun, ChevronRight, Plus } from "lucide-react";
 import ActivitySuggestions from "@/components/ActivitySuggestions";
 import { Link } from "wouter";
@@ -11,7 +12,28 @@ import { cn } from "@/lib/utils";
 
 export default function Home() {
   const today = new Date(2025, 2, 14); // Mock date for demo (March 14, 2025)
-  const todaysEvent = MOCK_EVENTS.find(e => isSameDay(e.date, today));
+  
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["events"],
+    queryFn: () => getEvents()
+  });
+
+  const eventsWithDates = events.map(e => ({
+    ...e,
+    date: parseISO(e.date)
+  }));
+
+  const todaysEvent = eventsWithDates.find(e => isSameDay(e.date, today));
+  
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -84,7 +106,7 @@ export default function Home() {
               <Button variant="ghost" size="sm" className="text-muted-foreground">See all</Button>
             </div>
             <div className="bg-white rounded-xl p-1 shadow-sm border border-border">
-              {MOCK_EVENTS.filter(e => e.date >= today).slice(0, 5).map((event, i) => (
+              {eventsWithDates.filter(e => e.date >= today).slice(0, 5).map((event, i) => (
                 <div key={event.id} className={cn(
                   "flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors",
                   i !== 4 && "border-b border-border/50"

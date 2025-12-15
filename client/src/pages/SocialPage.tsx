@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
-import { FRIENDS, MOCK_EVENTS } from "@/lib/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { getFriends, getSocialEvents } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,20 @@ import { Badge } from "@/components/ui/badge";
 import { Users, UserPlus, Calendar as CalendarIcon, MapPin } from "lucide-react";
 
 export default function SocialPage() {
+  const { data: friends = [], isLoading: friendsLoading } = useQuery({
+    queryKey: ["friends"],
+    queryFn: () => getFriends()
+  });
+
+  if (friendsLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </Layout>
+    );
+  }
   return (
     <Layout>
       <div className="space-y-8 animate-in fade-in duration-500">
@@ -29,7 +44,7 @@ export default function SocialPage() {
                 <Users className="w-5 h-5 text-primary" /> Your Circle
              </h2>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {FRIENDS.map((friend) => (
+                {friends.map((friend) => (
                    <Card key={friend.id} className="border-none shadow-sm soft-shadow hover:bg-muted/20 transition-colors cursor-pointer">
                       <CardContent className="p-4 flex items-center gap-4">
                          <Avatar className="h-12 w-12 border-2 border-white shadow-sm">

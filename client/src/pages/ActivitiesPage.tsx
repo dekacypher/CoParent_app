@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
-import { SUGGESTED_ACTIVITIES } from "@/lib/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { getActivities } from "@/lib/api";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,20 @@ import { Input } from "@/components/ui/input";
 import { Search, Filter, Heart, MapPin, Clock } from "lucide-react";
 
 export default function ActivitiesPage() {
+  const { data: activities = [], isLoading } = useQuery({
+    queryKey: ["activities"],
+    queryFn: () => getActivities()
+  });
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-muted-foreground">Loading activities...</div>
+        </div>
+      </Layout>
+    );
+  }
   return (
     <Layout>
       <div className="space-y-8 animate-in fade-in duration-500">
@@ -32,7 +47,7 @@ export default function ActivitiesPage() {
 
         {/* Activity Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {SUGGESTED_ACTIVITIES.map((activity) => (
+          {activities.map((activity) => (
              <Card key={activity.id} className="overflow-hidden border-none shadow-md soft-shadow hover:translate-y-[-4px] transition-all duration-300">
                <div className="relative h-48">
                  <img src={activity.image} alt={activity.title} className="w-full h-full object-cover" />

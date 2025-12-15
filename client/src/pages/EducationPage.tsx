@@ -1,5 +1,6 @@
 import Layout from "@/components/Layout";
-import { READING_LIST, SCHOOL_TASKS } from "@/lib/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { getReadingList, getSchoolTasks, getHandoverNotes } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,30 @@ import { CheckCircle2, Circle, BookOpen, GraduationCap, Link as LinkIcon, Extern
 import generatedImage from '@assets/generated_images/abstract_open_book_and_learning_symbols_in_soft_colors.png';
 
 export default function EducationPage() {
+  const { data: readingList = [], isLoading: readingLoading } = useQuery({
+    queryKey: ["reading-list"],
+    queryFn: () => getReadingList()
+  });
+
+  const { data: schoolTasks = [], isLoading: tasksLoading } = useQuery({
+    queryKey: ["school-tasks"],
+    queryFn: () => getSchoolTasks()
+  });
+
+  const { data: handoverNotes = [], isLoading: notesLoading } = useQuery({
+    queryKey: ["handover-notes"],
+    queryFn: () => getHandoverNotes()
+  });
+
+  if (readingLoading || tasksLoading || notesLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-muted-foreground">Loading education hub...</div>
+        </div>
+      </Layout>
+    );
+  }
   return (
     <Layout>
       <div className="space-y-8 animate-in fade-in duration-500">
@@ -45,7 +70,7 @@ export default function EducationPage() {
                   </Badge>
                </div>
                <CardContent className="p-0">
-                  {SCHOOL_TASKS.map((task, i) => (
+                  {schoolTasks.map((task, i) => (
                     <div key={task.id} className="flex items-center justify-between p-4 border-b last:border-0 hover:bg-muted/30 transition-colors group">
                        <div className="flex items-center gap-3">
                           {task.status === 'completed' ? (
@@ -78,7 +103,7 @@ export default function EducationPage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {READING_LIST.map((book) => (
+                {readingList.map((book) => (
                   <Card key={book.id} className="flex overflow-hidden border-none shadow-sm soft-shadow hover:shadow-md transition-shadow">
                     <div className="w-24 shrink-0">
                       <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
@@ -132,12 +157,16 @@ export default function EducationPage() {
                </CardHeader>
                <CardContent>
                   <div className="space-y-4">
-                    <div className="flex gap-3">
-                       <div className="w-8 h-8 rounded-full bg-[hsl(15_50%_65%)]/20 flex items-center justify-center text-[hsl(15_50%_40%)] font-bold text-xs">PB</div>
-                       <div className="bg-muted/50 p-3 rounded-tr-xl rounded-b-xl flex-1 text-sm">
-                          Forgot the math textbook at my place, dropping it off at school tomorrow morning.
-                       </div>
-                    </div>
+                    {handoverNotes.slice(0, 2).map((note) => (
+                      <div key={note.id} className="flex gap-3">
+                         <div className="w-8 h-8 rounded-full bg-[hsl(15_50%_65%)]/20 flex items-center justify-center text-[hsl(15_50%_40%)] font-bold text-xs">
+                           P{note.parent}
+                         </div>
+                         <div className="bg-muted/50 p-3 rounded-tr-xl rounded-b-xl flex-1 text-sm">
+                            {note.message}
+                         </div>
+                      </div>
+                    ))}
                   </div>
                   <div className="mt-4">
                      <Button className="w-full" variant="outline">Add Note</Button>

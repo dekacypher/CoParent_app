@@ -1,10 +1,31 @@
 import Layout from "@/components/Layout";
 import CalendarYearView from "@/components/CalendarYearView";
-import { MOCK_EVENTS } from "@/lib/mockData";
+import { useQuery } from "@tanstack/react-query";
+import { getEvents } from "@/lib/api";
+import { parseISO } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Download, Share2, Calendar as CalendarIcon, Filter } from "lucide-react";
 
 export default function CalendarPage() {
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ["events"],
+    queryFn: () => getEvents()
+  });
+
+  const eventsWithDates = events.map(e => ({
+    ...e,
+    date: parseISO(e.date)
+  }));
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-muted-foreground">Loading calendar...</div>
+        </div>
+      </Layout>
+    );
+  }
   return (
     <Layout>
       <div className="space-y-6">
@@ -48,7 +69,7 @@ export default function CalendarPage() {
            </div>
         </div>
 
-        <CalendarYearView year={2025} events={MOCK_EVENTS} />
+        <CalendarYearView year={2025} events={eventsWithDates} />
       </div>
     </Layout>
   );
