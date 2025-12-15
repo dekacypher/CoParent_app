@@ -1,0 +1,54 @@
+import { SUGGESTED_ACTIVITIES } from "@/lib/mockData";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Clock, Users, ArrowRight } from "lucide-react";
+
+export default function ActivitySuggestions() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-display font-bold">Suggested Activities</h2>
+        <Button variant="link" className="text-primary">View All</Button>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        {SUGGESTED_ACTIVITIES.slice(0, 3).map((activity) => (
+          <Card key={activity.id} className="overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow group">
+            <div className="relative h-32 overflow-hidden">
+              <img 
+                src={activity.image} 
+                alt={activity.title}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+              />
+              <Badge className="absolute top-2 right-2 bg-white/90 text-foreground backdrop-blur-sm hover:bg-white">
+                {activity.category}
+              </Badge>
+            </div>
+            <CardHeader className="p-4 pb-2">
+              <h3 className="font-display font-bold text-lg">{activity.title}</h3>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 text-sm text-muted-foreground">
+              <p className="line-clamp-2 mb-3">{activity.description}</p>
+              <div className="flex items-center gap-4 text-xs font-medium">
+                <div className="flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" />
+                  {activity.ageRange} yrs
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  {activity.duration}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="p-4 pt-0">
+               <Button variant="outline" size="sm" className="w-full group-hover:bg-secondary group-hover:border-secondary transition-colors">
+                 Add to Plan <ArrowRight className="w-4 h-4 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+               </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
