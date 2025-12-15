@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Calendar, Home, Settings, Heart, Menu, Bell } from "lucide-react";
+import { Calendar, Home, Settings, Heart, Menu, Bell, Users, GraduationCap } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -13,6 +13,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Home, label: "Dashboard", href: "/" },
     { icon: Calendar, label: "Year Planner", href: "/calendar" },
     { icon: Heart, label: "Activities", href: "/activities" },
+    { icon: Users, label: "Social & Friends", href: "/social" },
+    { icon: GraduationCap, label: "Education", href: "/education" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];
 

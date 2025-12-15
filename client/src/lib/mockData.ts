@@ -98,5 +98,41 @@ export const SUGGESTED_ACTIVITIES = [
     duration: "2-4 hours",
     image: "https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
     description: "Hit the local trails for some exercise and fresh air."
+  },
+  {
+    id: 5,
+    title: "Intro to Swahili",
+    category: "Language",
+    ageRange: "6-12",
+    duration: "1 hour",
+    image: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    description: "Beginner friendly language course for kids. Learn basic greetings and animals."
+  },
+  {
+    id: 6,
+    title: "Family Theater: The Lion King",
+    category: "Entertainment",
+    ageRange: "All ages",
+    duration: "2.5 hours",
+    image: "https://images.unsplash.com/photo-1503095392237-7362137d70ae?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
+    description: "The classic musical is back in town. Great for a weekend afternoon."
   }
+];
+
+export const FRIENDS = [
+  { id: 1, name: "The Johnsons", avatar: "J", relation: "Neighbors", kids: ["Mikey (8)"] },
+  { id: 2, name: "Sarah & Tom", avatar: "S", relation: "School Friends", kids: ["Emma (7)", "Noah (5)"] },
+  { id: 3, name: "Grandma Judy", avatar: "G", relation: "Family", kids: [] }
+];
+
+export const READING_LIST = [
+  { id: 1, title: "Harry Potter and the Sorcerer's Stone", author: "J.K. Rowling", progress: 65, assignedTo: "Parent A", cover: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" },
+  { id: 2, title: "Charlotte's Web", author: "E.B. White", progress: 100, assignedTo: "Parent B", cover: "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" },
+  { id: 3, title: "The Hobbit", author: "J.R.R. Tolkien", progress: 15, assignedTo: "Parent A", cover: "https://images.unsplash.com/photo-1621351183012-e2f9972dd9bf?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3" }
+];
+
+export const SCHOOL_TASKS = [
+  { id: 1, title: "Math Worksheet: Fractions", dueDate: "2025-03-20", status: "pending", platform: "Fridge Skole" },
+  { id: 2, title: "Science Fair Project Proposal", dueDate: "2025-03-25", status: "in-progress", platform: "Fridge Skole" },
+  { id: 3, title: "Permission Slip: Zoo Trip", dueDate: "2025-03-18", status: "completed", platform: "Fridge Skole" }
 ];
