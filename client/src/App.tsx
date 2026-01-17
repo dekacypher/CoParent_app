@@ -4,6 +4,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import CalendarPage from "@/pages/CalendarPage";
@@ -20,17 +22,61 @@ import SettingsPage from "@/pages/SettingsPage";
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={LoginPage} />
-      <Route path="/register" component={RegisterPage} />
-      <Route path="/" component={Home} />
-      <Route path="/calendar" component={CalendarPage} />
-      <Route path="/messages" component={MessagesPage} />
-      <Route path="/expenses" component={ExpensesPage} />
-      <Route path="/documents" component={DocumentsPage} />
-      <Route path="/activities" component={ActivitiesPage} />
-      <Route path="/social" component={SocialPage} />
-      <Route path="/education" component={EducationPage} />
-      <Route path="/settings" component={SettingsPage} />
+      <Route path="/login" component={() => (
+        <PublicRoute>
+          <LoginPage />
+        </PublicRoute>
+      )} />
+      <Route path="/register" component={() => (
+        <PublicRoute>
+          <RegisterPage />
+        </PublicRoute>
+      )} />
+      <Route path="/" component={() => (
+        <ProtectedRoute>
+          <Home />
+        </ProtectedRoute>
+      )} />
+      <Route path="/calendar" component={() => (
+        <ProtectedRoute>
+          <CalendarPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/messages" component={() => (
+        <ProtectedRoute>
+          <MessagesPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/expenses" component={() => (
+        <ProtectedRoute>
+          <ExpensesPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/documents" component={() => (
+        <ProtectedRoute>
+          <DocumentsPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/activities" component={() => (
+        <ProtectedRoute>
+          <ActivitiesPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/social" component={() => (
+        <ProtectedRoute>
+          <SocialPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/education" component={() => (
+        <ProtectedRoute>
+          <EducationPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/settings" component={() => (
+        <ProtectedRoute>
+          <SettingsPage />
+        </ProtectedRoute>
+      )} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -39,12 +85,14 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider delayDuration={0}>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <TooltipProvider delayDuration={0}>
+            <Toaster />
+            <Router />
+          </TooltipProvider>
+        </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

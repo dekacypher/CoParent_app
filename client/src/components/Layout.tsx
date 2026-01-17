@@ -2,16 +2,17 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Calendar, Home, Settings, Heart, Menu, Bell, Users, GraduationCap, DollarSign, LogOut, MessageSquare, FolderOpen } from "lucide-react";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { logout } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const { toast } = useToast();
+  const { signOut } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const navItems = [
     { icon: Home, label: "Dashboard", href: "/" },
@@ -25,16 +26,15 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { icon: Settings, label: "Settings", href: "/settings" },
   ];
 
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSuccess: () => {
-      toast({
-        title: "Logged out",
-        description: "You've been successfully logged out.",
-      });
-      setLocation("/login");
-    },
-  });
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await signOut();
+    toast({
+      title: "Logged out",
+      description: "You've been successfully logged out.",
+    });
+    setIsLoggingOut(false);
+  };
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
@@ -74,11 +74,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <Button
           variant="outline"
           className="w-full"
-          onClick={() => logoutMutation.mutate()}
-          disabled={logoutMutation.isPending}
+          onClick={handleLogout}
+          disabled={isLoggingOut}
         >
           <LogOut className="w-4 h-4 mr-2" />
-          {logoutMutation.isPending ? "Logging out..." : "Logout"}
+          {isLoggingOut ? "Logging out..." : "Logout"}
         </Button>
       </div>
     </div>

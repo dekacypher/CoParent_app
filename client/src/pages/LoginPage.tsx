@@ -1,7 +1,4 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
-import { login } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -9,41 +6,42 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useToast } from "../hooks/use-toast";
 import { Link } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { signIn, resetPassword } = useAuth();
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    username: "",
+    email: "",
     password: ""
   });
 
-  const loginMutation = useMutation({
-    mutationFn: login,
-    onSuccess: () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const { error } = await signIn(formData.email, formData.password);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: error.message || "Invalid email or password",
+      });
+    } else {
       toast({
         title: "Welcome back!",
         description: "You've successfully logged in.",
       });
-      setLocation("/");
-    },
-    onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Login failed",
-        description: error.message,
-      });
-    },
-  });
+    }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    loginMutation.mutate(formData);
+    setIsLoading(false);
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!resetEmail || !resetEmail.includes('@')) {
@@ -55,13 +53,22 @@ export default function LoginPage() {
       return;
     }
 
-    // Simulate password reset (in real app, this would call an API)
-    toast({
-      title: "Reset Email Sent",
-      description: "If an account exists with this email, you will receive password reset instructions shortly.",
-    });
-    setIsForgotPasswordOpen(false);
-    setResetEmail("");
+    const { error } = await resetPassword(resetEmail);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Reset Failed",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Reset Email Sent",
+        description: "If an account exists with this email, you will receive password reset instructions shortly.",
+      });
+      setIsForgotPasswordOpen(false);
+      setResetEmail("");
+    }
   };
 
   return (
@@ -76,13 +83,13 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                id="email"
+                type="email"
+                placeholder="your.email@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
@@ -109,9 +116,9 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={loginMutation.isPending}
+              disabled={isLoading}
             >
-              {loginMutation.isPending ? "Signing in..." : "Sign In"}
+              {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
