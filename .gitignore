@@ -4,3 +4,28 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Environment variables (contains sensitive data)
+.env
+.env.local
+.env*.local
+
+# Database files
+data.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads
+uploads/
+
+# Build artifacts
+.local/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
