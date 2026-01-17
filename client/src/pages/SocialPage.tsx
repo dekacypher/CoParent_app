@@ -1,17 +1,66 @@
+import { useState } from "react";
 import Layout from "@/components/Layout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getFriends, getSocialEvents } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, UserPlus, Calendar as CalendarIcon, MapPin } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { Users, UserPlus, Calendar as CalendarIcon, MapPin, PartyPopper } from "lucide-react";
 
 export default function SocialPage() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isAddFriendOpen, setIsAddFriendOpen] = useState(false);
+  const [isSuggestActivityOpen, setIsSuggestActivityOpen] = useState(false);
+  const [friendData, setFriendData] = useState({ name: "", email: "", relation: "", kids: "" });
+  const [activityData, setActivityData] = useState({ activity: "", date: "", time: "", location: "" });
+
   const { data: friends = [], isLoading: friendsLoading } = useQuery({
     queryKey: ["friends"],
     queryFn: () => getFriends()
   });
+
+  const handleAddFriend = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Friend invite sent!",
+      description: `Invitation sent to ${friendData.name}.`,
+    });
+    setIsAddFriendOpen(false);
+    setFriendData({ name: "", email: "", relation: "", kids: "" });
+  };
+
+  const handleSuggestActivity = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Activity suggested!",
+      description: "Your playdate suggestion has been sent to The Johnsons.",
+    });
+    setIsSuggestActivityOpen(false);
+    setActivityData({ activity: "", date: "", time: "", location: "" });
+  };
+
+  const handleAcceptInvite = () => {
+    toast({
+      title: "Invitation accepted!",
+      description: "You've accepted the Zoo Trip invitation.",
+    });
+  };
+
+  const handleDeclineInvite = () => {
+    toast({
+      title: "Invitation declined",
+      description: "You've declined the Zoo Trip invitation.",
+      variant: "destructive",
+    });
+  };
 
   if (friendsLoading) {
     return (
@@ -31,9 +80,78 @@ export default function SocialPage() {
             <h1 className="text-3xl font-display font-bold text-foreground">Social & Friends</h1>
             <p className="text-muted-foreground">Plan playdates and shared activities with friends and family.</p>
           </div>
-          <Button>
-            <UserPlus className="w-4 h-4 mr-2" /> Add Friend
-          </Button>
+          <Dialog open={isAddFriendOpen} onOpenChange={setIsAddFriendOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="w-4 h-4 mr-2" /> Add Friend
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <form onSubmit={handleAddFriend}>
+                <DialogHeader>
+                  <DialogTitle>Add a Friend</DialogTitle>
+                  <DialogDescription>
+                    Invite friends and family to coordinate playdates and activities.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Friend's Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="John Doe"
+                      value={friendData.name}
+                      onChange={(e) => setFriendData({ ...friendData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address (optional)</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={friendData.email}
+                      onChange={(e) => setFriendData({ ...friendData, email: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Add their email to invite them to join the app
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="relation">Relationship</Label>
+                    <Select value={friendData.relation} onValueChange={(value) => setFriendData({ ...friendData, relation: value })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select relationship" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="friend">Friend</SelectItem>
+                        <SelectItem value="family">Family</SelectItem>
+                        <SelectItem value="neighbor">Neighbor</SelectItem>
+                        <SelectItem value="coworker">Co-worker</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="kids">Their Kids' Names (optional)</Label>
+                    <Input
+                      id="kids"
+                      placeholder="Separate with commas"
+                      value={friendData.kids}
+                      onChange={(e) => setFriendData({ ...friendData, kids: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setIsAddFriendOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Send Invite</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -56,7 +174,10 @@ export default function SocialPage() {
                                <Badge variant="secondary" className="text-xs font-normal">{friend.relation}</Badge>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
-                               {friend.kids.length > 0 ? `Kids: ${friend.kids.join(", ")}` : "No kids listed"}
+                               {(() => {
+                                 const kids = typeof friend.kids === 'string' ? JSON.parse(friend.kids) : friend.kids;
+                                 return kids.length > 0 ? `Kids: ${kids.join(", ")}` : "No kids listed";
+                               })()}
                             </p>
                          </div>
                       </CardContent>
@@ -103,9 +224,80 @@ export default function SocialPage() {
                    <p className="text-pink-100 text-sm mb-4">
                       The weekend of March 22nd is open for both you and The Johnsons.
                    </p>
-                   <Button variant="secondary" className="w-full bg-white text-pink-600 hover:bg-white/90 border-none">
-                      Suggest Activity
-                   </Button>
+                   <Dialog open={isSuggestActivityOpen} onOpenChange={setIsSuggestActivityOpen}>
+                     <DialogTrigger asChild>
+                       <Button variant="secondary" className="w-full bg-white text-pink-600 hover:bg-white/90 border-none">
+                         <PartyPopper className="w-4 h-4 mr-2" />
+                         Suggest Activity
+                       </Button>
+                     </DialogTrigger>
+                     <DialogContent>
+                       <form onSubmit={handleSuggestActivity}>
+                         <DialogHeader>
+                           <DialogTitle>Suggest a Playdate Activity</DialogTitle>
+                           <DialogDescription>
+                             Propose an activity for the weekend of March 22nd with The Johnsons.
+                           </DialogDescription>
+                         </DialogHeader>
+                         <div className="space-y-4 py-4">
+                           <div className="space-y-2">
+                             <Label htmlFor="activity">Activity</Label>
+                             <Select value={activityData.activity} onValueChange={(value) => setActivityData({ ...activityData, activity: value })}>
+                               <SelectTrigger>
+                                 <SelectValue placeholder="Choose an activity" />
+                               </SelectTrigger>
+                               <SelectContent>
+                                 <SelectItem value="zoo">Visit the Zoo</SelectItem>
+                                 <SelectItem value="park">Playground at the Park</SelectItem>
+                                 <SelectItem value="museum">Children's Museum</SelectItem>
+                                 <SelectItem value="pool">Swimming Pool</SelectItem>
+                                 <SelectItem value="movie">Movie Theater</SelectItem>
+                                 <SelectItem value="picnic">Picnic & Outdoor Games</SelectItem>
+                                 <SelectItem value="other">Other Activity</SelectItem>
+                               </SelectContent>
+                             </Select>
+                           </div>
+                           <div className="grid grid-cols-2 gap-4">
+                             <div className="space-y-2">
+                               <Label htmlFor="date">Date</Label>
+                               <Input
+                                 id="date"
+                                 type="date"
+                                 value={activityData.date}
+                                 onChange={(e) => setActivityData({ ...activityData, date: e.target.value })}
+                                 required
+                               />
+                             </div>
+                             <div className="space-y-2">
+                               <Label htmlFor="time">Time</Label>
+                               <Input
+                                 id="time"
+                                 type="time"
+                                 value={activityData.time}
+                                 onChange={(e) => setActivityData({ ...activityData, time: e.target.value })}
+                                 required
+                               />
+                             </div>
+                           </div>
+                           <div className="space-y-2">
+                             <Label htmlFor="location">Location (optional)</Label>
+                             <Input
+                               id="location"
+                               placeholder="e.g., Central Park"
+                               value={activityData.location}
+                               onChange={(e) => setActivityData({ ...activityData, location: e.target.value })}
+                             />
+                           </div>
+                         </div>
+                         <DialogFooter>
+                           <Button type="button" variant="outline" onClick={() => setIsSuggestActivityOpen(false)}>
+                             Cancel
+                           </Button>
+                           <Button type="submit">Send Suggestion</Button>
+                         </DialogFooter>
+                       </form>
+                     </DialogContent>
+                   </Dialog>
                 </CardContent>
              </Card>
 
@@ -122,8 +314,8 @@ export default function SocialPage() {
                          <p className="text-sm font-medium">Tom invited you to "Zoo Trip"</p>
                          <p className="text-xs text-muted-foreground mt-0.5">Apr 05 • 10:00 AM</p>
                          <div className="flex gap-2 mt-2">
-                            <Button size="sm" className="h-7 text-xs">Accept</Button>
-                            <Button size="sm" variant="outline" className="h-7 text-xs">Decline</Button>
+                            <Button size="sm" className="h-7 text-xs" onClick={handleAcceptInvite}>Accept</Button>
+                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleDeclineInvite}>Decline</Button>
                          </div>
                       </div>
                    </div>

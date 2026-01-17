@@ -9,10 +9,13 @@ import ActivitySuggestions from "@/components/ActivitySuggestions";
 import { Link } from "wouter";
 import generatedImage from '@assets/generated_images/abstract_soft_shapes_representing_family_harmony.png';
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
 
 export default function Home() {
   const today = new Date(2025, 2, 14); // Mock date for demo (March 14, 2025)
-  
+  const [selectedEvent, setSelectedEvent] = useState<typeof eventsWithDates[0] | null>(null);
+
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
     queryFn: () => getEvents()
@@ -20,7 +23,7 @@ export default function Home() {
 
   const eventsWithDates = events.map(e => ({
     ...e,
-    date: parseISO(e.date)
+    date: parseISO(e.startDate)
   }));
 
   const todaysEvent = eventsWithDates.find(e => isSameDay(e.date, today));
@@ -57,9 +60,11 @@ export default function Home() {
                     View Full Calendar
                   </Button>
                 </Link>
-                <Button variant="outline" className="rounded-full bg-white/50 border-primary/20 hover:bg-white">
-                  Log Expense
-                </Button>
+                <Link href="/expenses">
+                  <Button variant="outline" className="rounded-full bg-white/50 border-primary/20 hover:bg-white">
+                    Log Expense
+                  </Button>
+                </Link>
               </div>
             </div>
             
@@ -107,15 +112,19 @@ export default function Home() {
             </div>
             <div className="bg-white rounded-xl p-1 shadow-sm border border-border">
               {eventsWithDates.filter(e => e.date >= today).slice(0, 5).map((event, i) => (
-                <div key={event.id} className={cn(
-                  "flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors",
-                  i !== 4 && "border-b border-border/50"
-                )}>
+                <div
+                  key={event.id}
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer",
+                    i !== 4 && "border-b border-border/50"
+                  )}
+                  onClick={() => setSelectedEvent(event)}
+                >
                   <div className="flex items-center gap-4">
                     <div className={cn(
                       "w-12 h-12 rounded-xl flex flex-col items-center justify-center text-xs font-bold border",
-                      isSameDay(event.date, today) 
-                        ? "bg-primary text-white border-primary" 
+                      isSameDay(event.date, today)
+                        ? "bg-primary text-white border-primary"
                         : "bg-background text-muted-foreground border-border"
                     )}>
                       <span>{format(event.date, 'MMM')}</span>
@@ -123,14 +132,26 @@ export default function Home() {
                     </div>
                     <div>
                       <h4 className="font-semibold text-foreground">{event.title}</h4>
-                      <p className="text-sm text-muted-foreground capitalize">{event.type}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {event.type} • {event.startTime} - {event.endTime} {event.timeZone}
+                      </p>
+                      {event.startDate !== event.endDate && (
+                        <p className="text-xs text-muted-foreground">
+                          {format(parseISO(event.endDate), 'MMM do')}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
+                    {event.recurrence && event.recurrence !== 'none' && (
+                      <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">
+                        {event.recurrence}
+                      </span>
+                    )}
                     <span className={cn(
                       "px-2.5 py-1 rounded-full text-xs font-medium",
-                      event.parent === 'A' 
-                        ? "bg-[hsl(150_30%_60%)]/20 text-[hsl(150_30%_30%)]" 
+                      event.parent === 'A'
+                        ? "bg-[hsl(150_30%_60%)]/20 text-[hsl(150_30%_30%)]"
                         : "bg-[hsl(15_50%_65%)]/20 text-[hsl(15_50%_40%)]"
                     )}>
                       Parent {event.parent}
@@ -152,9 +173,11 @@ export default function Home() {
              <div className="relative z-10">
                 <h3 className="font-display font-bold text-lg mb-2">Auto-Plan 2026</h3>
                 <p className="text-indigo-100 text-sm mb-4">Ready to set up next year? Generate a complete schedule in seconds.</p>
-                <Button variant="secondary" size="sm" className="w-full bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md">
-                  Start Planning
-                </Button>
+                <Link href="/calendar">
+                  <Button variant="secondary" size="sm" className="w-full bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-md">
+                    Start Planning
+                  </Button>
+                </Link>
              </div>
              {/* Decorative circles */}
              <div className="absolute top-[-20%] right-[-20%] w-32 h-32 rounded-full bg-white/10 blur-2xl" />
@@ -166,17 +189,81 @@ export default function Home() {
           <div className="bg-secondary/30 rounded-xl p-6 border border-secondary">
              <h3 className="font-display font-bold text-lg mb-4">Quick Add</h3>
              <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start bg-white hover:bg-white/80 border-secondary-foreground/10 text-secondary-foreground">
-                   <Plus className="w-4 h-4 mr-2" /> Add Event
-                </Button>
-                <Button variant="outline" className="w-full justify-start bg-white hover:bg-white/80 border-secondary-foreground/10 text-secondary-foreground">
-                   <Plus className="w-4 h-4 mr-2" /> Request Change
-                </Button>
+                <Link href="/calendar" className="block">
+                  <Button variant="outline" className="w-full justify-start bg-white hover:bg-white/80 border-secondary-foreground/10 text-secondary-foreground">
+                    <Plus className="w-4 h-4 mr-2" /> Add Event
+                  </Button>
+                </Link>
+                <Link href="/messages" className="block">
+                  <Button variant="outline" className="w-full justify-start bg-white hover:bg-white/80 border-secondary-foreground/10 text-secondary-foreground">
+                    <Plus className="w-4 h-4 mr-2" /> Request Change
+                  </Button>
+                </Link>
              </div>
           </div>
 
         </div>
       </div>
+
+      {/* Event Details Dialog */}
+      <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          {selectedEvent && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl">{selectedEvent.title}</DialogTitle>
+                <DialogDescription>
+                  {format(selectedEvent.date, 'EEEE, MMMM do, yyyy')}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <CalendarIcon className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Time</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedEvent.startTime} - {selectedEvent.endTime} {selectedEvent.timeZone}
+                    </p>
+                  </div>
+                </div>
+                {selectedEvent.location && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-5 h-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium">Location</p>
+                      <p className="text-sm text-muted-foreground">{selectedEvent.location}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedEvent.description && (
+                  <div>
+                    <p className="text-sm font-medium mb-1">Description</p>
+                    <p className="text-sm text-muted-foreground">{selectedEvent.description}</p>
+                  </div>
+                )}
+                <div className="flex items-center gap-3 pt-2">
+                  <div className={cn(
+                    "px-3 py-1.5 rounded-full text-sm font-medium",
+                    selectedEvent.parent === 'A'
+                      ? "bg-[hsl(150_30%_60%)]/20 text-[hsl(150_30%_30%)]"
+                      : "bg-[hsl(15_50%_65%)]/20 text-[hsl(15_50%_40%)]"
+                  )}>
+                    Parent {selectedEvent.parent}
+                  </div>
+                  <div className="px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary">
+                    {selectedEvent.type}
+                  </div>
+                  {selectedEvent.recurrence && selectedEvent.recurrence !== 'none' && (
+                    <div className="px-3 py-1.5 rounded-full text-sm font-medium bg-secondary text-secondary-foreground">
+                      {selectedEvent.recurrence}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

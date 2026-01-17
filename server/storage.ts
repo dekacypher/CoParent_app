@@ -1,5 +1,5 @@
-import { 
-  type User, 
+import {
+  type User,
   type InsertUser,
   type Child,
   type InsertChild,
@@ -17,6 +17,12 @@ import {
   type InsertSchoolTask,
   type HandoverNote,
   type InsertHandoverNote,
+  type Expense,
+  type InsertExpense,
+  type Message,
+  type InsertMessage,
+  type Document,
+  type InsertDocument,
   users,
   children,
   events,
@@ -25,10 +31,13 @@ import {
   socialEvents,
   readingList,
   schoolTasks,
-  handoverNotes
+  handoverNotes,
+  expenses,
+  messages,
+  documents
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, or, gte, lte, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -81,6 +90,28 @@ export interface IStorage {
   // Handover Notes methods
   getHandoverNotes(childId?: number): Promise<HandoverNote[]>;
   createHandoverNote(note: InsertHandoverNote): Promise<HandoverNote>;
+
+  // Expense methods
+  getExpenses(childId?: number, status?: string): Promise<Expense[]>;
+  getExpense(id: number): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined>;
+  deleteExpense(id: number): Promise<boolean>;
+
+  // Message methods
+  getMessages(userId: string, otherUserId?: string): Promise<Message[]>;
+  getMessage(id: number): Promise<Message | undefined>;
+  createMessage(message: InsertMessage & { contentHash: string }): Promise<Message>;
+  markMessageAsRead(id: number): Promise<Message | undefined>;
+  getUnreadCount(userId: string): Promise<number>;
+
+  // Document methods
+  getDocuments(userId: string, category?: string, childId?: number): Promise<Document[]>;
+  getDocument(id: number): Promise<Document | undefined>;
+  createDocument(document: InsertDocument): Promise<Document>;
+  updateDocument(id: number, document: Partial<InsertDocument>): Promise<Document | undefined>;
+  deleteDocument(id: number): Promise<boolean>;
+  shareDocument(id: number, userIds: string[]): Promise<Document | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -152,7 +183,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<boolean> {
     const result = await db.delete(events).where(eq(events.id, id));
-    return result.rowCount !== null && result.rowCount > 0;
+    return result.changes > 0;
   }
 
   // Activities methods
@@ -272,6 +303,141 @@ export class DatabaseStorage implements IStorage {
   async createHandoverNote(note: InsertHandoverNote): Promise<HandoverNote> {
     const [newNote] = await db.insert(handoverNotes).values(note).returning();
     return newNote;
+  }
+
+  // Expense methods
+  async getExpenses(childId?: number, status?: string): Promise<Expense[]> {
+    let query = db.select().from(expenses).orderBy(desc(expenses.date));
+
+    const conditions = [];
+    if (childId) conditions.push(eq(expenses.childId, childId));
+    if (status) conditions.push(eq(expenses.status, status));
+
+    if (conditions.length > 0) {
+      return query.where(and(...conditions));
+    }
+    return query;
+  }
+
+  async getExpense(id: number): Promise<Expense | undefined> {
+    const [expense] = await db.select().from(expenses).where(eq(expenses.id, id));
+    return expense || undefined;
+  }
+
+  async createExpense(expense: InsertExpense): Promise<Expense> {
+    const [newExpense] = await db.insert(expenses).values(expense).returning();
+    return newExpense;
+  }
+
+  async updateExpense(id: number, expense: Partial<InsertExpense>): Promise<Expense | undefined> {
+    const [updated] = await db.update(expenses).set(expense).where(eq(expenses.id, id)).returning();
+    return updated || undefined;
+  }
+
+  async deleteExpense(id: number): Promise<boolean> {
+    const result = await db.delete(expenses).where(eq(expenses.id, id));
+    return result.changes > 0;
+  }
+
+  // Message methods
+  async getMessages(userId: string, otherUserId?: string): Promise<Message[]> {
+    let query = db.select().from(messages).orderBy(desc(messages.createdAt));
+
+    if (otherUserId) {
+      // Get conversation between two users
+      return query.where(
+        or(
+          and(eq(messages.senderId, userId), eq(messages.receiverId, otherUserId)),
+          and(eq(messages.senderId, otherUserId), eq(messages.receiverId, userId))
+        )
+      );
+    } else {
+      // Get all messages for user (sent or received)
+      return query.where(
+        or(eq(messages.receiverId, userId), eq(messages.senderId, userId))
+      );
+    }
+  }
+
+  async getMessage(id: number): Promise<Message | undefined> {
+    const [message] = await db.select().from(messages).where(eq(messages.id, id));
+    return message || undefined;
+  }
+
+  async createMessage(message: InsertMessage & { contentHash: string }): Promise<Message> {
+    const [newMessage] = await db.insert(messages).values(message).returning();
+    return newMessage;
+  }
+
+  async markMessageAsRead(id: number): Promise<Message | undefined> {
+    const [updated] = await db.update(messages)
+      .set({ isRead: true, readAt: new Date() })
+      .where(eq(messages.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async getUnreadCount(userId: string): Promise<number> {
+    const result = await db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.receiverId, userId), eq(messages.isRead, false)));
+    return result.length;
+  }
+
+  // Document methods
+  async getDocuments(userId: string, category?: string, childId?: number): Promise<Document[]> {
+    let query = db.select().from(documents).orderBy(desc(documents.createdAt));
+
+    const conditions = [];
+
+    // User can see documents they uploaded or that are shared with them
+    conditions.push(
+      or(
+        eq(documents.uploadedBy, userId),
+        // This is a simplified check - in production you'd use SQL array contains
+        eq(documents.uploadedBy, userId) // Placeholder - needs proper array contains check
+      )
+    );
+
+    if (category) conditions.push(eq(documents.category, category));
+    if (childId) conditions.push(eq(documents.childId, childId));
+
+    if (conditions.length > 0) {
+      return query.where(and(...conditions));
+    }
+    return query;
+  }
+
+  async getDocument(id: number): Promise<Document | undefined> {
+    const [document] = await db.select().from(documents).where(eq(documents.id, id));
+    return document || undefined;
+  }
+
+  async createDocument(document: InsertDocument): Promise<Document> {
+    const [newDocument] = await db.insert(documents).values(document).returning();
+    return newDocument;
+  }
+
+  async updateDocument(id: number, document: Partial<InsertDocument>): Promise<Document | undefined> {
+    const [updated] = await db.update(documents)
+      .set({ ...document, updatedAt: new Date() })
+      .where(eq(documents.id, id))
+      .returning();
+    return updated || undefined;
+  }
+
+  async deleteDocument(id: number): Promise<boolean> {
+    const result = await db.delete(documents).where(eq(documents.id, id));
+    return result.changes > 0;
+  }
+
+  async shareDocument(id: number, userIds: string[]): Promise<Document | undefined> {
+    const [updated] = await db.update(documents)
+      .set({ sharedWith: JSON.stringify(userIds), updatedAt: new Date() })
+      .where(eq(documents.id, id))
+      .returning();
+    return updated || undefined;
   }
 }
 

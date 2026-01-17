@@ -1,14 +1,45 @@
 import Layout from "@/components/Layout";
-import { useQuery } from "@tanstack/react-query";
-import { getReadingList, getSchoolTasks, getHandoverNotes } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getReadingList, getSchoolTasks, getHandoverNotes, createReadingListItem, createHandoverNote } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Circle, BookOpen, GraduationCap, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle2, Circle, BookOpen, GraduationCap, Link as LinkIcon, ExternalLink, Plus } from "lucide-react";
 import generatedImage from '@assets/generated_images/abstract_open_book_and_learning_symbols_in_soft_colors.png';
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function EducationPage() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Dialog states
+  const [isBookDialogOpen, setIsBookDialogOpen] = useState(false);
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+
+  // Book form state
+  const [bookFormData, setBookFormData] = useState({
+    childId: 0,
+    title: "",
+    author: "",
+    progress: 0,
+    assignedTo: "Parent A",
+    cover: ""
+  });
+
+  // Note form state
+  const [noteFormData, setNoteFormData] = useState({
+    childId: 0,
+    parent: "A" as "A" | "B",
+    message: ""
+  });
+
   const { data: readingList = [], isLoading: readingLoading } = useQuery({
     queryKey: ["reading-list"],
     queryFn: () => getReadingList()
@@ -19,10 +50,120 @@ export default function EducationPage() {
     queryFn: () => getSchoolTasks()
   });
 
+  const { data: children = [] } = useQuery({
+    queryKey: ["children"],
+    queryFn: async () => {
+      const res = await fetch("/api/children");
+      if (!res.ok) throw new Error("Failed to fetch children");
+      return res.json();
+    }
+  });
+
   const { data: handoverNotes = [], isLoading: notesLoading } = useQuery({
     queryKey: ["handover-notes"],
     queryFn: () => getHandoverNotes()
   });
+
+  // Create book mutation
+  const createBookMutation = useMutation({
+    mutationFn: createReadingListItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reading-list"] });
+      toast({
+        title: "Book added",
+        description: "The book has been added to the reading list.",
+      });
+      setIsBookDialogOpen(false);
+      setBookFormData({
+        childId: 0,
+        title: "",
+        author: "",
+        progress: 0,
+        assignedTo: "Parent A",
+        cover: ""
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add book.",
+      });
+    },
+  });
+
+  // Create note mutation
+  const createNoteMutation = useMutation({
+    mutationFn: createHandoverNote,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["handover-notes"] });
+      toast({
+        title: "Note added",
+        description: "Your handover note has been added.",
+      });
+      setIsNoteDialogOpen(false);
+      setNoteFormData({
+        childId: 0,
+        parent: "A",
+        message: ""
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to add note.",
+      });
+    },
+  });
+
+  const handleAddBook = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate
+    if (!bookFormData.childId || bookFormData.childId === 0) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please select a child.",
+      });
+      return;
+    }
+    if (!bookFormData.title || !bookFormData.author) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
+      });
+      return;
+    }
+
+    createBookMutation.mutate(bookFormData as any);
+  };
+
+  const handleAddNote = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate
+    if (!noteFormData.childId || noteFormData.childId === 0) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please select a child.",
+      });
+      return;
+    }
+    if (!noteFormData.message || noteFormData.message.trim() === "") {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please enter a message.",
+      });
+      return;
+    }
+
+    createNoteMutation.mutate(noteFormData as any);
+  };
 
   if (readingLoading || tasksLoading || notesLoading) {
     return (
@@ -99,14 +240,99 @@ export default function EducationPage() {
                 <h2 className="text-xl font-display font-bold flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-primary" /> Shared Reading List
                 </h2>
-                <Button variant="outline" size="sm">Add Book</Button>
+                <Dialog open={isBookDialogOpen} onOpenChange={setIsBookDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Plus className="w-4 h-4 mr-2" /> Add Book
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[500px]">
+                    <form onSubmit={handleAddBook}>
+                      <DialogHeader>
+                        <DialogTitle>Add Book to Reading List</DialogTitle>
+                        <DialogDescription>
+                          Add a new book for your child to read.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="child">Child *</Label>
+                          <Select
+                            value={bookFormData.childId.toString()}
+                            onValueChange={(value) => setBookFormData({ ...bookFormData, childId: parseInt(value) })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select child" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {children.map((child) => (
+                                <SelectItem key={child.id} value={child.id.toString()}>
+                                  {child.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="title">Title *</Label>
+                          <Input
+                            id="title"
+                            value={bookFormData.title}
+                            onChange={(e) => setBookFormData({ ...bookFormData, title: e.target.value })}
+                            placeholder="e.g., Harry Potter"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="author">Author *</Label>
+                          <Input
+                            id="author"
+                            value={bookFormData.author}
+                            onChange={(e) => setBookFormData({ ...bookFormData, author: e.target.value })}
+                            placeholder="e.g., J.K. Rowling"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="assignedTo">Currently with</Label>
+                          <Select
+                            value={bookFormData.assignedTo}
+                            onValueChange={(value) => setBookFormData({ ...bookFormData, assignedTo: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Parent A">Parent A</SelectItem>
+                              <SelectItem value="Parent B">Parent B</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cover">Cover Image URL (optional)</Label>
+                          <Input
+                            id="cover"
+                            value={bookFormData.cover}
+                            onChange={(e) => setBookFormData({ ...bookFormData, cover: e.target.value })}
+                            placeholder="https://example.com/cover.jpg"
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button type="submit" disabled={createBookMutation.isPending}>
+                          {createBookMutation.isPending ? "Adding..." : "Add Book"}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {readingList.map((book) => (
                   <Card key={book.id} className="flex overflow-hidden border-none shadow-sm soft-shadow hover:shadow-md transition-shadow">
                     <div className="w-24 shrink-0">
-                      <img src={book.cover} alt={book.title} className="w-full h-full object-cover" />
+                      <img src={book.cover || "https://via.placeholder.com/150x200?text=Book"} alt={book.title} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 p-4 flex flex-col justify-between">
                       <div>
@@ -169,7 +395,74 @@ export default function EducationPage() {
                     ))}
                   </div>
                   <div className="mt-4">
-                     <Button className="w-full" variant="outline">Add Note</Button>
+                     <Dialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+                       <DialogTrigger asChild>
+                         <Button className="w-full" variant="outline">
+                           <Plus className="w-4 h-4 mr-2" /> Add Note
+                         </Button>
+                       </DialogTrigger>
+                       <DialogContent className="sm:max-w-[500px]">
+                         <form onSubmit={handleAddNote}>
+                           <DialogHeader>
+                             <DialogTitle>Add Handover Note</DialogTitle>
+                             <DialogDescription>
+                               Leave a note for the other parent about important updates or observations.
+                             </DialogDescription>
+                           </DialogHeader>
+                           <div className="grid gap-4 py-4">
+                             <div className="space-y-2">
+                               <Label htmlFor="note-child">Child *</Label>
+                               <Select
+                                 value={noteFormData.childId.toString()}
+                                 onValueChange={(value) => setNoteFormData({ ...noteFormData, childId: parseInt(value) })}
+                               >
+                                 <SelectTrigger>
+                                   <SelectValue placeholder="Select child" />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   {children.map((child) => (
+                                     <SelectItem key={child.id} value={child.id.toString()}>
+                                       {child.name}
+                                     </SelectItem>
+                                   ))}
+                                 </SelectContent>
+                               </Select>
+                             </div>
+                             <div className="space-y-2">
+                               <Label htmlFor="parent">From</Label>
+                               <Select
+                                 value={noteFormData.parent}
+                                 onValueChange={(value) => setNoteFormData({ ...noteFormData, parent: value as "A" | "B" })}
+                               >
+                                 <SelectTrigger>
+                                   <SelectValue />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                   <SelectItem value="A">Parent A</SelectItem>
+                                   <SelectItem value="B">Parent B</SelectItem>
+                                 </SelectContent>
+                               </Select>
+                             </div>
+                             <div className="space-y-2">
+                               <Label htmlFor="message">Message *</Label>
+                               <Textarea
+                                 id="message"
+                                 value={noteFormData.message}
+                                 onChange={(e) => setNoteFormData({ ...noteFormData, message: e.target.value })}
+                                 placeholder="e.g., Emma had a great day at school, learned about fractions..."
+                                 rows={4}
+                                 required
+                               />
+                             </div>
+                           </div>
+                           <DialogFooter>
+                             <Button type="submit" disabled={createNoteMutation.isPending}>
+                               {createNoteMutation.isPending ? "Adding..." : "Add Note"}
+                             </Button>
+                           </DialogFooter>
+                         </form>
+                       </DialogContent>
+                     </Dialog>
                   </div>
                </CardContent>
             </Card>

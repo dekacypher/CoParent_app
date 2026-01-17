@@ -1,18 +1,15 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { pgTable, text, varchar, serial, integer, timestamp, boolean, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Helper function to generate UUID-like IDs for SQLite
-export const generateId = () => crypto.randomUUID();
-
-export const users = sqliteTable("users", {
-  id: text("id").primaryKey().$defaultFn(() => generateId()),
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull(), // "parentA" or "parentB"
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -33,37 +30,29 @@ export type User = typeof users.$inferSelect;
 
 // Co-Parenting App Tables
 
-export const children = sqliteTable("children", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const children = pgTable("children", {
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
   age: integer("age").notNull(),
   gender: text("gender"),
-  interests: text("interests").notNull().default("[]"), // JSON array stored as text
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  interests: text("interests").array().notNull().default(sql`ARRAY[]::text[]`),
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const events = sqliteTable("events", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  childId: integer("child_id").references(() => children.id), // Optional - can be 0 for all children
+export const events = pgTable("events", {
+  id: serial("id").primaryKey(),
+  childId: integer("child_id").references(() => children.id).notNull(),
   title: text("title").notNull(),
-  startDate: text("start_date").notNull(), // ISO date string for when event starts
-  endDate: text("end_date").notNull(), // ISO date string for when event ends (can be same as startDate)
-  startTime: text("start_time").notNull().default("00:00"), // Time in HH:MM format
-  endTime: text("end_time").notNull().default("23:59"), // Time in HH:MM format
-  timeZone: text("time_zone").notNull().default("UTC"), // Time zone (e.g., "Europe/Oslo")
+  date: date("date").notNull(),
   parent: text("parent").notNull(), // "A" or "B"
   type: text("type").notNull(), // "custody", "holiday", "activity", "travel"
-  recurrence: text("recurrence"), // "none", "daily", "weekly", "monthly", "yearly", "custom"
-  recurrenceInterval: integer("recurrence_interval").default(1), // e.g., every 2 weeks
-  recurrenceEnd: text("recurrence_end"), // ISO date string when recurrence ends (optional)
-  recurrenceDays: text("recurrence_days"), // JSON array of days for custom recurrence (e.g., "[1,3,5]" for Mon/Wed/Fri)
   description: text("description"),
   location: text("location"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const activities = sqliteTable("activities", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const activities = pgTable("activities", {
+  id: serial("id").primaryKey(),
   title: text("title").notNull(),
   category: text("category").notNull(),
   ageRange: text("age_range").notNull(),
@@ -71,94 +60,93 @@ export const activities = sqliteTable("activities", {
   image: text("image"),
   description: text("description").notNull(),
   season: text("season"), // "winter", "summer", "spring", "fall", "all"
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const friends = sqliteTable("friends", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const friends = pgTable("friends", {
+  id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  email: text("email"),
   avatar: text("avatar"),
   relation: text("relation").notNull(),
-  kids: text("kids").notNull().default("[]"), // JSON array stored as text
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  kids: text("kids").array().notNull().default(sql`ARRAY[]::text[]`),
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const socialEvents = sqliteTable("social_events", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const socialEvents = pgTable("social_events", {
+  id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  date: text("date").notNull(), // ISO date string
+  date: date("date").notNull(),
   location: text("location"),
   friendId: integer("friend_id").references(() => friends.id),
   description: text("description"),
   rsvpStatus: text("rsvp_status").default("pending"), // "pending", "accepted", "declined"
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const readingList = sqliteTable("reading_list", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const readingList = pgTable("reading_list", {
+  id: serial("id").primaryKey(),
   childId: integer("child_id").references(() => children.id).notNull(),
   title: text("title").notNull(),
   author: text("author").notNull(),
   progress: integer("progress").notNull().default(0),
   assignedTo: text("assigned_to").notNull(), // "Parent A" or "Parent B"
   cover: text("cover"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const schoolTasks = sqliteTable("school_tasks", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const schoolTasks = pgTable("school_tasks", {
+  id: serial("id").primaryKey(),
   childId: integer("child_id").references(() => children.id).notNull(),
   title: text("title").notNull(),
-  dueDate: text("due_date").notNull(), // ISO date string
+  dueDate: date("due_date").notNull(),
   status: text("status").notNull().default("pending"), // "pending", "in-progress", "completed"
   platform: text("platform").default("Fridge Skole"),
   description: text("description"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const handoverNotes = sqliteTable("handover_notes", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const handoverNotes = pgTable("handover_notes", {
+  id: serial("id").primaryKey(),
   childId: integer("child_id").references(() => children.id).notNull(),
   parent: text("parent").notNull(), // "A" or "B"
   message: text("message").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const expenses = sqliteTable("expenses", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
   childId: integer("child_id").references(() => children.id).notNull(),
   title: text("title").notNull(),
   amount: integer("amount").notNull(), // Store as cents to avoid decimal issues
   category: text("category").notNull(), // "medical", "education", "activities", "clothing", "food", "other"
   paidBy: text("paid_by").notNull(), // "parentA" or "parentB"
   splitPercentage: integer("split_percentage").notNull().default(50), // Default 50/50 split
-  date: text("date").notNull(), // ISO date string
+  date: date("date").notNull(),
   receipt: text("receipt"), // URL to receipt image/document
   status: text("status").notNull().default("pending"), // "pending", "approved", "reimbursed"
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
-export const messages = sqliteTable("messages", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  senderId: text("sender_id").references(() => users.id).notNull(),
-  receiverId: text("receiver_id").references(() => users.id).notNull(),
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  senderId: varchar("sender_id").references(() => users.id).notNull(),
+  receiverId: varchar("receiver_id").references(() => users.id).notNull(),
   subject: text("subject"),
   content: text("content").notNull(),
-  isRead: integer("is_read", { mode: "boolean" }).notNull().default(false),
-  readAt: integer("read_at", { mode: "timestamp" }),
+  isRead: boolean("is_read").notNull().default(false),
+  readAt: timestamp("read_at"),
   // Immutable audit fields - CANNOT be changed after creation
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
   // Hash of message content for integrity verification (court admissibility)
   contentHash: text("content_hash").notNull(),
   // IP address for audit trail
   senderIp: text("sender_ip")
 });
 
-export const documents = sqliteTable("documents", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  uploadedBy: text("uploaded_by").references(() => users.id).notNull(),
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  uploadedBy: varchar("uploaded_by").references(() => users.id).notNull(),
   childId: integer("child_id").references(() => children.id),
   title: text("title").notNull(),
   description: text("description"),
@@ -167,10 +155,10 @@ export const documents = sqliteTable("documents", {
   fileName: text("file_name").notNull(),
   fileSize: integer("file_size").notNull(), // in bytes
   fileType: text("file_type").notNull(), // MIME type
-  sharedWith: text("shared_with").notNull().default("[]"), // JSON array of user IDs
-  tags: text("tags").notNull().default("[]"), // JSON array of tags
-  createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
+  sharedWith: text("shared_with").array().notNull().default(sql`ARRAY[]::text[]`), // Array of user IDs
+  tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
 // Insert Schemas

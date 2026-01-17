@@ -1,22 +1,40 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { Calendar, Home, Settings, Heart, Menu, Bell, Users, GraduationCap } from "lucide-react";
+import { Calendar, Home, Settings, Heart, Menu, Bell, Users, GraduationCap, DollarSign, LogOut, MessageSquare, FolderOpen } from "lucide-react";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { logout } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { toast } = useToast();
 
   const navItems = [
     { icon: Home, label: "Dashboard", href: "/" },
     { icon: Calendar, label: "Year Planner", href: "/calendar" },
+    { icon: MessageSquare, label: "Messages", href: "/messages" },
+    { icon: DollarSign, label: "Expenses", href: "/expenses" },
+    { icon: FolderOpen, label: "Documents", href: "/documents" },
     { icon: Heart, label: "Activities", href: "/activities" },
     { icon: Users, label: "Social & Friends", href: "/social" },
     { icon: GraduationCap, label: "Education", href: "/education" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];
+
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      toast({
+        title: "Logged out",
+        description: "You've been successfully logged out.",
+      });
+      setLocation("/login");
+    },
+  });
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
@@ -47,12 +65,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </Link>
         ))}
       </nav>
-      <div className="p-4 mt-auto">
+      <div className="p-4 mt-auto space-y-3">
         <div className="bg-gradient-to-br from-secondary/50 to-white p-4 rounded-xl border border-secondary">
           <p className="text-xs font-semibold text-primary mb-1">Next Handover</p>
           <p className="text-sm font-medium text-foreground">Friday, 5:00 PM</p>
           <p className="text-xs text-muted-foreground mt-1">School Pickup → Parent A</p>
         </div>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          {logoutMutation.isPending ? "Logging out..." : "Logout"}
+        </Button>
       </div>
     </div>
   );

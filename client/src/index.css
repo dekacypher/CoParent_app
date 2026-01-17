@@ -6,46 +6,46 @@
 @theme inline {
   --font-sans: 'DM Sans', sans-serif;
   --font-display: 'Nunito', sans-serif;
-  
+
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
 
-  /* Color Palette: "Calm Harmony" */
+  /* Color Palette: "Calm Harmony" - Light Mode */
   /* Base - Warm Off-White */
   --color-background: hsl(40 20% 98%);
   --color-foreground: hsl(220 15% 20%);
-  
+
   /* Cards - Pure White */
   --color-card: hsl(0 0% 100%);
   --color-card-foreground: hsl(220 15% 20%);
-  
+
   /* Popovers */
   --color-popover: hsl(0 0% 100%);
   --color-popover-foreground: hsl(220 15% 20%);
-  
+
   /* Primary - Soft Teal (Trust/Balance) */
   --color-primary: hsl(170 45% 45%);
   --color-primary-foreground: hsl(0 0% 100%);
-  
+
   /* Secondary - Warm Sand (Support) */
   --color-secondary: hsl(35 30% 90%);
   --color-secondary-foreground: hsl(35 40% 30%);
-  
+
   /* Muted */
   --color-muted: hsl(220 10% 95%);
   --color-muted-foreground: hsl(220 10% 50%);
-  
+
   /* Accents - Parent A (Sage) & Parent B (Terracotta) */
   --color-parent-a: hsl(150 30% 60%);
   --color-parent-b: hsl(15 50% 65%);
   --color-accent: hsl(170 45% 95%);
   --color-accent-foreground: hsl(170 45% 30%);
-  
+
   --color-destructive: hsl(0 60% 60%);
   --color-destructive-foreground: hsl(0 0% 100%);
-  
+
   --color-border: hsl(220 10% 90%);
   --color-input: hsl(220 10% 90%);
   --color-ring: hsl(170 45% 45%);
@@ -70,6 +70,44 @@
     from { height: var(--radix-accordion-content-height) }
     to { height: 0 }
   }
+
+  /* Dark Mode Colors */
+  --dark-color-background: hsl(220 20% 12%);
+  --dark-color-foreground: hsl(220 15% 95%);
+
+  --dark-color-card: hsl(220 20% 15%);
+  --dark-color-card-foreground: hsl(220 15% 95%);
+
+  --dark-color-popover: hsl(220 20% 15%);
+  --dark-color-popover-foreground: hsl(220 15% 95%);
+
+  --dark-color-primary: hsl(170 45% 50%);
+  --dark-color-primary-foreground: hsl(0 0% 100%);
+
+  --dark-color-secondary: hsl(220 15% 20%);
+  --dark-color-secondary-foreground: hsl(220 15% 90%);
+
+  --dark-color-muted: hsl(220 15% 18%);
+  --dark-color-muted-foreground: hsl(220 10% 70%);
+
+  --dark-color-accent: hsl(170 45% 20%);
+  --dark-color-accent-foreground: hsl(170 45% 90%);
+
+  --dark-color-destructive: hsl(0 60% 65%);
+  --dark-color-destructive-foreground: hsl(0 0% 100%);
+
+  --dark-color-border: hsl(220 15% 20%);
+  --dark-color-input: hsl(220 15% 20%);
+  --dark-color-ring: hsl(170 45% 50%);
+
+  --dark-color-sidebar: hsl(220 20% 14%);
+  --dark-color-sidebar-foreground: hsl(220 15% 90%);
+  --dark-color-sidebar-primary: hsl(170 45% 50%);
+  --dark-color-sidebar-primary-foreground: hsl(0 0% 100%);
+  --dark-color-sidebar-accent: hsl(220 15% 20%);
+  --dark-color-sidebar-accent-foreground: hsl(220 15% 90%);
+  --dark-color-sidebar-border: hsl(220 15% 20%);
+  --dark-color-sidebar-ring: hsl(170 45% 50%);
 }
 
 @layer base {
@@ -81,6 +119,38 @@
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-display font-bold;
+  }
+}
+
+@layer base {
+  .dark {
+    --color-background: var(--dark-color-background);
+    --color-foreground: var(--dark-color-foreground);
+    --color-card: var(--dark-color-card);
+    --color-card-foreground: var(--dark-color-card-foreground);
+    --color-popover: var(--dark-color-popover);
+    --color-popover-foreground: var(--dark-color-popover-foreground);
+    --color-primary: var(--dark-color-primary);
+    --color-primary-foreground: var(--dark-color-primary-foreground);
+    --color-secondary: var(--dark-color-secondary);
+    --color-secondary-foreground: var(--dark-color-secondary-foreground);
+    --color-muted: var(--dark-color-muted);
+    --color-muted-foreground: var(--dark-color-muted-foreground);
+    --color-accent: var(--dark-color-accent);
+    --color-accent-foreground: var(--dark-color-accent-foreground);
+    --color-destructive: var(--dark-color-destructive);
+    --color-destructive-foreground: var(--dark-color-destructive-foreground);
+    --color-border: var(--dark-color-border);
+    --color-input: var(--dark-color-input);
+    --color-ring: var(--dark-color-ring);
+    --color-sidebar: var(--dark-color-sidebar);
+    --color-sidebar-foreground: var(--dark-color-sidebar-foreground);
+    --color-sidebar-primary: var(--dark-color-sidebar-primary);
+    --color-sidebar-primary-foreground: var(--dark-color-sidebar-primary-foreground);
+    --color-sidebar-accent: var(--dark-color-sidebar-accent);
+    --color-sidebar-accent-foreground: var(--dark-color-sidebar-accent-foreground);
+    --color-sidebar-border: var(--dark-color-sidebar-border);
+    --color-sidebar-ring: var(--dark-color-sidebar-ring);
   }
 }
 
