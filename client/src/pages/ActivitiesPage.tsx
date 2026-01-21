@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, Heart, MapPin, Clock, Navigation, Loader2, Calendar } from "lucide-react";
+import { getEventImageUrl } from "@/lib/images";
 
 interface Location {
   latitude: number;
@@ -332,17 +333,9 @@ export default function ActivitiesPage() {
             category = "Arts & Culture";
           }
 
-          // Get image with variety and fallback
-          const eventImages = [
-            "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400", // Festival/event
-            "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400", // Concert/music
-            "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400", // Kids event
-            "https://images.unsplash.com/photo-1569163139394-de4798aa62b0?w=400", // Museum/cultural
-            "https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=400", // Outdoor event
-            "https://images.unsplash.com/photo-1511578314322-379afb476865?w=400", // Family activity
-          ];
-
-          const image = event.image?.url || event.imageUrl || eventImages[index % eventImages.length];
+          // Get relevant image based on event keywords instead of cycling
+          const image = event.image?.url || event.imageUrl ||
+            getEventImageUrl(name, category.toLowerCase(), event.id || `city-${index}`);
 
           return {
             id: event.id || `city-${index}`,
