@@ -45,7 +45,7 @@ function extractKeywords(title: string, type: string): string[] {
 
 /**
  * Generate a consistent image URL based on event title and type
- * Using Unsplash Source with keywords
+ * Using Lorem Picsum and cached fallbacks
  */
 export function getEventImageUrl(title: string, type: string, eventId: number | string): string {
   const cacheKey = `${eventId}-${title}`;
@@ -56,12 +56,38 @@ export function getEventImageUrl(title: string, type: string, eventId: number | 
   }
 
   const keywords = extractKeywords(title, type);
-  const primaryKeyword = keywords[0];
 
-  // Use Unsplash Source with specific keywords
-  // Format: https://source.unsplash.com/{width}x{height}/?{keyword}
-  // Using sig parameter to prevent caching same image for different events
-  const imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(primaryKeyword)}&sig=${eventId}`;
+  // Create a hash from the title to get a consistent image
+  let hash = 0;
+  const str = title + type + eventId.toString();
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+
+  // Use positive hash and add variety based on event type
+  const imageId = Math.abs(hash) + 1000;
+
+  // Use picsum.photos with seed for consistent images per event
+  // Adding keyword-based category selection
+  const categoryMap: Record<string, number> = {
+    custody: 0,
+    holiday: 1000,
+    activity: 2000,
+    travel: 3000,
+    medical: 4000,
+    school: 5000,
+    sports: 6000,
+    birthday: 7000,
+    oslo: 8000,
+    default: 0
+  };
+
+  const categoryOffset = categoryMap[type] || categoryMap.default;
+  const finalImageId = (imageId + categoryOffset) % 1000;
+
+  // Use Lorem Picsum with seed for consistent images
+  const imageUrl = `https://picsum.photos/id/${finalImageId}/800/600`;
 
   imageCache[cacheKey] = imageUrl;
   return imageUrl;
