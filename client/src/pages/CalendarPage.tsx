@@ -132,6 +132,9 @@ export default function CalendarPage() {
     recurrenceDays: "[]",
     description: "",
     location: "",
+    address: "",
+    city: "",
+    postalCode: "",
   });
 
   const [showRepeatOptions, setShowRepeatOptions] = useState(false);
@@ -232,6 +235,9 @@ export default function CalendarPage() {
         recurrenceDays: existingEvent.recurrenceDays || "[]",
         description: existingEvent.description || "",
         location: existingEvent.location || "",
+        address: existingEvent.address || "",
+        city: existingEvent.city || "",
+        postalCode: existingEvent.postalCode || "",
       });
       setIsEditMode(true);
       setIsDialogOpen(true);
@@ -706,15 +712,67 @@ export default function CalendarPage() {
                   )}
                 </div>
 
-                {/* Location */}
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    placeholder="e.g., Home, School, Park"
-                    value={formData.location || ""}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  />
+                {/* Location & Address */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location Name</Label>
+                    <Input
+                      id="location"
+                      placeholder="e.g., Home, School, Central Park"
+                      value={formData.location || ""}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Street Address</Label>
+                      <Input
+                        id="address"
+                        placeholder="123 Main St"
+                        value={formData.address || ""}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
+                        placeholder="Oslo"
+                        value={formData.city || ""}
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="postalCode">Postal/ZIP Code</Label>
+                    <Input
+                      id="postalCode"
+                      placeholder="0001"
+                      value={formData.postalCode || ""}
+                      onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                    />
+                  </div>
+
+                  {(formData.address || formData.city || formData.postalCode) && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const address = [formData.address, formData.city, formData.postalCode]
+                          .filter(Boolean)
+                          .join(', ');
+                        const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+                        window.open(mapUrl, '_blank');
+                      }}
+                      className="w-full"
+                    >
+                      <MapPin className="w-4 h-4 mr-2" />
+                      View on Google Maps
+                    </Button>
+                  )}
                 </div>
 
                 {/* Description */}

@@ -61,6 +61,9 @@ export const events = sqliteTable("events", {
   recurrenceDays: text("recurrence_days"), // JSON array of days for custom recurrence (e.g., "[1,3,5]" for Mon/Wed/Fri)
   description: text("description"),
   location: text("location"),
+  address: text("address"), // Full street address
+  city: text("city"), // City name
+  postalCode: text("postal_code"), // Postal/ZIP code
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
 });
 

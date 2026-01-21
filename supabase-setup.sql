@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS events (
   recurrence_days TEXT,
   description TEXT,
   location TEXT,
+  address TEXT,
+  city TEXT,
+  postal_code TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
