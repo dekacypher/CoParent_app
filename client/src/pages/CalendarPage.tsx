@@ -23,6 +23,7 @@ export default function CalendarPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -48,18 +49,48 @@ export default function CalendarPage() {
   });
 
   const handleShare = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url).then(() => {
+    setIsShareOpen(true);
+  };
+
+  const getShareableLink = () => {
+    const url = new URL(window.location.href);
+    if (filterParent !== "all") url.searchParams.set('parent', filterParent);
+    if (filterType !== "all") url.searchParams.set('type', filterType);
+    if (filterChild !== "all") url.searchParams.set('child', filterChild);
+    return url.toString();
+  };
+
+  const copyShareLink = () => {
+    const link = getShareableLink();
+    navigator.clipboard.writeText(link).then(() => {
       toast({
-        title: "Calendar link copied",
-        description: "Share this link with your co-parent to give them access to the calendar.",
+        title: "Link copied!",
+        description: "Calendar link has been copied to clipboard.",
       });
+      setIsShareOpen(false);
     }).catch(() => {
       toast({
         variant: "destructive",
         title: "Failed to copy",
-        description: "Could not copy the calendar link.",
+        description: "Could not copy the link to clipboard.",
       });
+    });
+  };
+
+  const shareViaEmail = () => {
+    const link = getShareableLink();
+    const subject = encodeURIComponent(`Our Co-Parent Calendar - ${viewYear}`);
+    const body = encodeURIComponent(`Check out our co-parenting calendar:\n\n${link}\n\nThis link includes our schedule and events.`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    setIsShareOpen(false);
+  };
+
+  const exportAndShare = () => {
+    handleExport();
+    setIsShareOpen(false);
+    toast({
+      title: "Export + Share",
+      description: "Calendar exported! You can now attach the .ics file to an email or message.",
     });
   };
 
@@ -985,6 +1016,76 @@ export default function CalendarPage() {
                 className="flex-1"
               >
                 Apply
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Share Dialog */}
+        <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Share Calendar</DialogTitle>
+              <DialogDescription>
+                Share your co-parenting calendar with your co-parent or others
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* Copy Link */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Shareable Link</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={getShareableLink()}
+                    readOnly
+                    className="flex-1"
+                  />
+                  <Button onClick={copyShareLink} size="sm">
+                    Copy
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Share this link to give access to your calendar
+                </p>
+              </div>
+
+              <div className="border-t pt-4">
+                <Label className="text-sm font-medium mb-3">Share via</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Email */}
+                  <Button
+                    variant="outline"
+                    onClick={shareViaEmail}
+                    className="h-auto py-3 flex flex-col items-center gap-2"
+                  >
+                    <Upload className="w-5 h-5" />
+                    <span className="text-sm">Email</span>
+                  </Button>
+
+                  {/* Export & Attach */}
+                  <Button
+                    variant="outline"
+                    onClick={exportAndShare}
+                    className="h-auto py-3 flex flex-col items-center gap-2"
+                  >
+                    <Download className="w-5 h-5" />
+                    <span className="text-sm">Export & File</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                <p className="font-medium mb-1">💡 Tips:</p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Copy the link and send it via your preferred messaging app</li>
+                  <li>Export to .ics and import into Google Calendar, Apple Calendar, or Outlook</li>
+                  <li>Use the Import button to add events from other calendars</li>
+                </ul>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => setIsShareOpen(false)}>
+                Done
               </Button>
             </DialogFooter>
           </DialogContent>
