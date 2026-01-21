@@ -10,15 +10,24 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/contexts/ThemeContext";
-import { User, Bell, Shield, Palette, Globe, Download, AlertTriangle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { User, Bell, Shield, Palette, Globe, Download, AlertTriangle, Users } from "lucide-react";
+import { supabaseApi } from "@/lib/supabase";
 
 export default function SettingsPage() {
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
 
   // Dialog states
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  // Parent Names Settings
+  const [parentNames, setParentNames] = useState({
+    parentAName: "Parent A",
+    parentBName: "Parent B"
+  });
 
   // Password form state
   const [passwordData, setPasswordData] = useState({
@@ -59,6 +68,42 @@ export default function SettingsPage() {
     dateFormat: "MM/DD/YYYY",
     currency: "USD"
   });
+
+  // Load parent names on mount
+  useEffect(() => {
+    if (user) {
+      supabaseApi.getProfile(user.id).then(({ data }) => {
+        if (data) {
+          setParentNames({
+            parentAName: data.parent_a_name || "Parent A",
+            parentBName: data.parent_b_name || "Parent B"
+          });
+        }
+      });
+    }
+  }, [user]);
+
+  const handleSaveParentNames = async () => {
+    if (!user) return;
+
+    const { error } = await supabaseApi.updateProfile(user.id, {
+      parent_a_name: parentNames.parentAName,
+      parent_b_name: parentNames.parentBName
+    });
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update parent names.",
+      });
+    } else {
+      toast({
+        title: "Parent names updated",
+        description: "Your custom parent names have been saved.",
+      });
+    }
+  };
 
   const handleSaveProfile = () => {
     toast({
@@ -242,6 +287,48 @@ export default function SettingsPage() {
               </div>
             </div>
             <Button onClick={handleSaveProfile} className="bg-teal-600 hover:bg-teal-700">Save Profile</Button>
+          </CardContent>
+        </Card>
+
+        {/* Parent Names Settings */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-teal-600" />
+              <CardTitle>Parent Names</CardTitle>
+            </div>
+            <CardDescription>Customize how parents are displayed throughout the app</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="parentAName">Parent A Name</Label>
+                <Input
+                  id="parentAName"
+                  value={parentNames.parentAName}
+                  onChange={(e) => setParentNames({ ...parentNames, parentAName: e.target.value })}
+                  placeholder="e.g., Mom, Sarah, Jessica"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This name will be used instead of "Parent A" throughout the app
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="parentBName">Parent B Name</Label>
+                <Input
+                  id="parentBName"
+                  value={parentNames.parentBName}
+                  onChange={(e) => setParentNames({ ...parentNames, parentBName: e.target.value })}
+                  placeholder="e.g., Dad, John, Michael"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This name will be used instead of "Parent B" throughout the app
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleSaveParentNames} className="bg-teal-600 hover:bg-teal-700">
+              Save Parent Names
+            </Button>
           </CardContent>
         </Card>
 

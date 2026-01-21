@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   email TEXT,
   username TEXT UNIQUE,
   role TEXT NOT NULL DEFAULT 'parentA', -- 'parentA' or 'parentB'
+  parent_a_name TEXT NOT NULL DEFAULT 'Parent A',
+  parent_b_name TEXT NOT NULL DEFAULT 'Parent B',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

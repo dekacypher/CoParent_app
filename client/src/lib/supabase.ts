@@ -9,6 +9,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export interface Database {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          id: string
+          email: string | null
+          username: string | null
+          role: string
+          parent_a_name: string
+          parent_b_name: string
+          created_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'id' | 'created_at'>
+        Update: Partial<Database['public']['Tables']['profiles']['Row']>
+      }
       children: {
         Row: {
           id: number
@@ -105,6 +118,26 @@ export interface Database {
 
 // Helper functions for common operations
 export const supabaseApi = {
+  // Profiles
+  async getProfile(userId: string) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single()
+    return { data, error }
+  },
+
+  async updateProfile(userId: string, updates: { parent_a_name?: string; parent_b_name?: string }) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single()
+    return { data, error }
+  },
+
   // Children
   async getChildren() {
     const { data, error } = await supabase

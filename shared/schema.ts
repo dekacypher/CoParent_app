@@ -12,6 +12,8 @@ export const users = sqliteTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   role: text("role").notNull(), // "parentA" or "parentB"
+  parentAName: text("parent_a_name").notNull().default("Parent A"), // Custom name for Parent A
+  parentBName: text("parent_b_name").notNull().default("Parent B"), // Custom name for Parent B
   createdAt: integer("created_at", { mode: "timestamp" }).$defaultFn(() => new Date()).notNull()
 });
 
