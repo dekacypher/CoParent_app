@@ -12,9 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Plus, Edit, Trash2, Calendar as CalendarIcon, Download, Share2, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar as CalendarIcon, Download, Upload, Share2, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Event, InsertEvent } from "@shared/schema";
+import { readICSFile, validateICSFile, convertICSEventsToEvents } from "@/lib/ics-parser";
 
 export default function CalendarPage() {
   const { toast } = useToast();
@@ -109,6 +110,76 @@ export default function CalendarPage() {
     setFilterParent("all");
     setFilterType("all");
     setFilterChild("all");
+  };
+
+  const handleImportCalendar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    const validation = validateICSFile(file);
+    if (!validation.valid) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file",
+        description: validation.error,
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Importing calendar...",
+        description: "Please wait while we import your events.",
+      });
+
+      // Parse ICS file
+      const icsEvents = await readICSFile(file);
+
+      if (icsEvents.length === 0) {
+        toast({
+          variant: "destructive",
+          title: "No events found",
+          description: "The ICS file doesn't contain any events.",
+        });
+        return;
+      }
+
+      // Convert to our event format
+      const convertedEvents = convertICSEventsToEvents(icsEvents);
+
+      // Create events
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const eventData of convertedEvents) {
+        try {
+          await createEvent(eventData);
+          successCount++;
+        } catch (error) {
+          console.error('Error creating event:', error);
+          errorCount++;
+        }
+      }
+
+      // Refresh events
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+
+      toast({
+        title: "Import completed",
+        description: `Successfully imported ${successCount} events${errorCount > 0 ? ` (${errorCount} failed)` : ''}.`,
+      });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        variant: "destructive",
+        title: "Import failed",
+        description: error instanceof Error ? error.message : "Failed to import calendar file.",
+      });
+    }
+
+    // Reset input
+    e.target.value = '';
   };
 
   const { data: children = [] } = useQuery({
@@ -361,6 +432,32 @@ export default function CalendarPage() {
                 <span className="ml-1 w-2 h-2 bg-primary rounded-full" />
               )}
             </Button>
+            <Label
+              htmlFor="ics-import"
+              className="cursor-pointer"
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden sm:flex"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('ics-import')?.click();
+                }}
+                asChild
+              >
+                <span>
+                  <Upload className="w-4 h-4 mr-2" /> Import
+                </span>
+              </Button>
+            </Label>
+            <input
+              id="ics-import"
+              type="file"
+              accept=".ics"
+              onChange={handleImportCalendar}
+              className="hidden"
+            />
             <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 className="w-4 h-4 mr-2" /> Share
             </Button>
