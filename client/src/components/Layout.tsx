@@ -15,7 +15,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const navItems = [
-    { icon: Home, label: "Dashboard", href: "/" },
+    { icon: Home, label: "Dashboard", href: "/dashboard" },
     { icon: Calendar, label: "Year Planner", href: "/calendar" },
     { icon: MessageSquare, label: "Messages", href: "/messages" },
     { icon: DollarSign, label: "Expenses", href: "/expenses" },

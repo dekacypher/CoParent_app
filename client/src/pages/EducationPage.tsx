@@ -1,6 +1,7 @@
 import Layout from "@/components/Layout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getReadingList, getSchoolTasks, getHandoverNotes, createReadingListItem, createHandoverNote } from "@/lib/api";
+import type { Child } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -265,7 +266,7 @@ export default function EducationPage() {
                               <SelectValue placeholder="Select child" />
                             </SelectTrigger>
                             <SelectContent>
-                              {children.map((child) => (
+                              {children.map((child: Child) => (
                                 <SelectItem key={child.id} value={child.id.toString()}>
                                   {child.name}
                                 </SelectItem>
@@ -420,7 +421,7 @@ export default function EducationPage() {
                                    <SelectValue placeholder="Select child" />
                                  </SelectTrigger>
                                  <SelectContent>
-                                   {children.map((child) => (
+                                   {children.map((child: Child) => (
                                      <SelectItem key={child.id} value={child.id.toString()}>
                                        {child.name}
                                      </SelectItem>

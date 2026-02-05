@@ -6,6 +6,7 @@ import path from "path";
 import fs from "fs";
 import { storage } from "./storage";
 import { hashPassword, verifyPassword, sanitizeUser, requireAuth } from "./auth";
+import { authRateLimiter, apiRateLimiter } from "./middleware/security";
 import {
   insertUserSchema,
   loginSchema,
@@ -46,8 +47,8 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  // Authentication routes
-  app.post("/api/auth/register", async (req, res) => {
+  // Authentication routes (with rate limiting)
+  app.post("/api/auth/register", authRateLimiter, async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
 
@@ -75,7 +76,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authRateLimiter, async (req, res) => {
     try {
       console.log("Login attempt for username:", req.body.username);
       const validatedData = loginSchema.parse(req.body);

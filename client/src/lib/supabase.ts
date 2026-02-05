@@ -164,9 +164,16 @@ export const supabaseApi = {
   },
 
   async createEvent(event: any) {
+    // Handle both schemas: with 'date' column or with 'start_date'/'end_date'
+    const insertData = {
+      ...event,
+      // Add 'date' column if the table uses the old schema
+      ...(event.start_date && { date: event.start_date })
+    };
+
     const { data, error } = await supabase
       .from('events')
-      .insert(event)
+      .insert(insertData)
       .select()
       .single()
     return { data, error }

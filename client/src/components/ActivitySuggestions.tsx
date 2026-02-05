@@ -5,14 +5,35 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Users, ArrowRight, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createEvent } from "@/lib/api";
+import { supabaseApi } from "@/lib/supabase";
 
 export default function ActivitySuggestions() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const addToPlanMutation = useMutation({
-    mutationFn: createEvent,
+    mutationFn: async (eventData: any) => {
+      const supabaseEvent = {
+        child_id: eventData.childId || null,
+        title: eventData.title,
+        start_date: eventData.startDate,
+        end_date: eventData.endDate,
+        start_time: eventData.startTime,
+        end_time: eventData.endTime,
+        time_zone: eventData.timeZone || 'Europe/Oslo',
+        parent: eventData.parent || 'A',
+        type: eventData.type || 'custody',
+        description: eventData.description || null,
+        location: eventData.location || null,
+        recurrence: null,
+        recurrence_interval: 1,
+        recurrence_end: null,
+        recurrence_days: null,
+      };
+      const { data, error } = await supabaseApi.createEvent(supabaseEvent);
+      if (error) throw error;
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       toast({
@@ -20,11 +41,12 @@ export default function ActivitySuggestions() {
         description: "The activity has been added to your calendar.",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Error adding activity:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add activity to plan.",
+        description: error.message || "Failed to add activity to plan.",
       });
     },
   });
@@ -38,12 +60,12 @@ export default function ActivitySuggestions() {
       endTime: "10:00",
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       parent: "A" as const,
-      type: "activity" as const,
+      type: "custody" as const,
       description: activity.description,
       location: "",
     };
 
-    addToPlanMutation.mutate(eventData as any);
+    addToPlanMutation.mutate(eventData);
   };
 
   return (

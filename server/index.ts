@@ -4,6 +4,12 @@ import session from "express-session";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import {
+  applySecurityMiddleware,
+  authRateLimiter,
+  apiRateLimiter,
+  errorHandler,
+} from "./middleware/security";
 
 const app = express();
 const httpServer = createServer(app);
@@ -40,9 +46,13 @@ app.use(
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
     },
   })
 );
+
+// Apply security middleware (CSP, CORS, rate limiting, etc.)
+applySecurityMiddleware(app);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -84,13 +94,8 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
+  // Use security error handler
+  app.use(errorHandler);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

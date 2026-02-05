@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getActivities, createEvent, getChildren } from "@/lib/api";
+import { getActivities, getChildren } from "@/lib/api";
+import { supabaseApi } from "@/lib/supabase";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,8 @@ export default function ActivitiesPage() {
   const [viewDetailsActivity, setViewDetailsActivity] = useState<NearbyActivity | OsloEvent | any | null>(null);
   const [planFormData, setPlanFormData] = useState({
     date: "",
-    time: "",
+    startTime: "",
+    endTime: "",
     childId: 0,
   });
 
@@ -75,7 +77,30 @@ export default function ActivitiesPage() {
   });
 
   const addToPlanMutation = useMutation({
-    mutationFn: createEvent,
+    mutationFn: async (eventData: any) => {
+      // Transform the data to match Supabase schema
+      const supabaseEvent = {
+        child_id: eventData.childId || null,
+        title: eventData.title,
+        start_date: eventData.startDate,
+        end_date: eventData.endDate,
+        start_time: eventData.startTime,
+        end_time: eventData.endTime,
+        time_zone: eventData.timeZone || 'Europe/Oslo',
+        parent: eventData.parent || 'A',
+        type: eventData.type || 'activity',
+        description: eventData.description || null,
+        location: eventData.location || null,
+        recurrence: eventData.recurrence || null,
+        recurrence_interval: eventData.recurrenceInterval || 1,
+        recurrence_end: eventData.recurrenceEnd || null,
+        recurrence_days: eventData.recurrenceDays || null,
+      };
+
+      const { data, error } = await supabaseApi.createEvent(supabaseEvent);
+      if (error) throw error;
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       toast({
@@ -83,14 +108,15 @@ export default function ActivitiesPage() {
         description: "Activity has been added to your calendar.",
       });
       setIsAddToPlanOpen(false);
-      setPlanFormData({ date: "", time: "", childId: 0 });
+      setPlanFormData({ date: "", startTime: "", endTime: "", childId: 0 });
       setSelectedActivity(null);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Error adding activity:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to add activity to calendar.",
+        description: error.message || "Failed to add activity to calendar.",
       });
     },
   });
@@ -172,56 +198,20 @@ export default function ActivitiesPage() {
     return "Outdoor";
   };
 
-  // Get appropriate image for place type with variety
+  // Get appropriate image for the specific place (not generic)
   const getPlaceImage = (category: string, name: string, index: number): string => {
-    const imagesByCategory: Record<string, string[]> = {
-      "Outdoor": [
-        "https://images.unsplash.com/photo-1503596476-1c12a8ba09a9?w=400", // Adventure park
-        "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400", // Nature/forest
-        "https://images.unsplash.com/photo-1551632811-561732d1e306?w=400", // Playground
-        "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400", // Park with kids
-        "https://images.unsplash.com/photo-1587271449115-6c51e4d26d7d?w=400", // Outdoor activities
-      ],
-      "Educational": [
-        "https://images.unsplash.com/photo-1603873619638-d4f2ca79d1c0?w=400", // Museum interior
-        "https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?w=400", // Science exhibits
-        "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400", // Library
-        "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=400", // Books and learning
-        "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=400", // Science lab
-      ],
-      "Sports": [
-        "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=400", // Soccer/sports
-        "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400", // Trampoline
-        "https://images.unsplash.com/photo-1576678927484-cc907957088c?w=400", // Basketball
-        "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=400", // Swimming pool
-        "https://images.unsplash.com/photo-1526232761682-d26e03ac148e?w=400", // Sports center
-      ],
-      "Arts & Crafts": [
-        "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400", // Painting
-        "https://images.unsplash.com/photo-1452860606245-08befc0ff44b?w=400", // Art supplies
-        "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400", // Crafting
-        "https://images.unsplash.com/photo-1596548438137-d51ea5c83d4c?w=400", // Kids art
-        "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=400", // Creative workshop
-      ],
-      "Entertainment": [
-        "https://images.unsplash.com/photo-1503095396549-807759245b35?w=400", // Theater
-        "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=400", // Cinema
-        "https://images.unsplash.com/photo-1524712245354-2c4e5e7121c0?w=400", // Performance
-        "https://images.unsplash.com/photo-1598387993281-cecf8b71a8f8?w=400", // Stage
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400", // Entertainment venue
-      ],
-    };
-
-    const images = imagesByCategory[category] || imagesByCategory["Outdoor"];
-
-    // Use name hash to get consistent but varied images
+    // Create a unique hash based on the place name to get a consistent image for that place
     let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = ((hash << 5) - hash) + name.charCodeAt(i);
+    const str = name.toLowerCase().replace(/\s+/g, '-');
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
       hash = hash & hash;
     }
-    const imageIndex = Math.abs(hash + index) % images.length;
-    return images[imageIndex];
+
+    // Use a wide range of images (10-1000) to ensure variety
+    const imageId = 10 + Math.abs(hash) % 990;
+
+    return `https://picsum.photos/id/${imageId}/400/300`;
   };
 
   // Fetch nearby activities using OpenStreetMap Overpass API
@@ -266,15 +256,40 @@ export default function ActivitiesPage() {
           const distance = calculateDistance(latitude, longitude, lat, lon);
           const category = categorizePlace(element.tags);
 
+          // Build the exact address from OSM data
+          const street = element.tags["addr:street"];
+          const housenumber = element.tags["addr:housenumber"];
+          const postcode = element.tags["addr:postcode"];
+          const city = element.tags["addr:city"] || element.tags["addr:town"] || element.tags["addr:village"] || location.city;
+
+          // Try to get the most complete address possible
+          let addressParts = [];
+          if (housenumber && street) {
+            addressParts.push(`${housenumber} ${street}`);
+          } else if (street) {
+            addressParts.push(street);
+          }
+          if (postcode) addressParts.push(postcode);
+          if (city) addressParts.push(city);
+
+          // If we still don't have a good address, use the place name with city
+          let address: string;
+          if (addressParts.length > 0) {
+            address = addressParts.join(", ");
+          } else if (city) {
+            // Try reverse geocoding to get a street name
+            address = `${element.tags.name}, ${city}`;
+          } else {
+            address = element.tags.name;
+          }
+
           return {
             id: `osm-${element.id}`,
             name: element.tags.name,
             category,
-            description: element.tags.description || `A ${category.toLowerCase()} facility in your area.`,
-            address: [element.tags["addr:street"], element.tags["addr:city"]]
-              .filter(Boolean)
-              .join(", ") || "Address not available",
-            distance: Math.round(distance * 10) / 10, // Round to 1 decimal
+            description: element.tags.description || `A ${category.toLowerCase()} facility.`,
+            address,
+            distance: Math.round(distance * 10) / 10,
             rating: undefined,
             image: getPlaceImage(category, element.tags.name, index),
             city: location.city || "Unknown",
@@ -363,7 +378,7 @@ export default function ActivitiesPage() {
             description: "Join us for a day of family-friendly activities and entertainment.",
             date: new Date().toLocaleDateString(),
             location: targetCity,
-            image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=400",
+            image: "https://picsum.photos/id/237/400/300",
             url: `https://www.google.com/search?q=family+events+${encodeURIComponent(targetCity)}`
           },
           {
@@ -373,7 +388,7 @@ export default function ActivitiesPage() {
             description: "Interactive and educational workshops for children of all ages.",
             date: new Date().toLocaleDateString(),
             location: targetCity,
-            image: "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=400",
+            image: "https://picsum.photos/id/238/400/300",
             url: `https://www.google.com/search?q=kids+activities+${encodeURIComponent(targetCity)}`
           },
           {
@@ -383,7 +398,7 @@ export default function ActivitiesPage() {
             description: "Explore the outdoors with fun activities for the whole family.",
             date: new Date().toLocaleDateString(),
             location: targetCity,
-            image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400",
+            image: "https://picsum.photos/id/239/400/300",
             url: `https://www.google.com/search?q=outdoor+activities+${encodeURIComponent(targetCity)}`
           }
         ];
@@ -411,11 +426,16 @@ export default function ActivitiesPage() {
   }, [userLocation?.city]);
 
   // Handle Add to Plan button click
-  const handleAddToPlan = (activity: { name: string; description: string; type: string }) => {
+  const handleAddToPlan = (activity: { name: string; description: string; type: string; address?: string; location?: string; time?: string }) => {
     setSelectedActivity(activity);
     // Set default date to today
     const today = new Date().toISOString().split('T')[0];
-    setPlanFormData({ ...planFormData, date: today });
+    setPlanFormData({
+      ...planFormData,
+      date: today,
+      startTime: activity.time || "",
+      endTime: ""
+    });
     setIsAddToPlanOpen(true);
   };
 
@@ -424,14 +444,52 @@ export default function ActivitiesPage() {
     e.preventDefault();
     if (!selectedActivity) return;
 
+    // Get address from selectedActivity if available (for nearby activities)
+    const address = (selectedActivity as any).address || null;
+    const location = (selectedActivity as any).location || "";
+
+    // Set time - if only startTime provided, set endTime 2 hours later
+    let startTime = planFormData.startTime || "09:00";
+    let endTime = planFormData.endTime;
+
+    if (!endTime && planFormData.startTime) {
+      // Calculate endTime 2 hours after startTime
+      const [hours, minutes] = planFormData.startTime.split(':').map(Number);
+      const endHour = (hours + 2) % 24;
+      endTime = `${String(endHour).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    } else if (!endTime) {
+      endTime = "11:00";
+    }
+
+    // Map activity type to valid event type
+    const eventTypeMapping: Record<string, string> = {
+      'activity': 'custody',
+      'city-event': 'custody',
+      'Outdoor': 'custody',
+      'Educational': 'school',
+      'Sports': 'activity',
+      'Arts & Crafts': 'activity',
+      'Entertainment': 'activity'
+    };
+
+    const eventType = eventTypeMapping[selectedActivity.type] || 'custody';
+
     addToPlanMutation.mutate({
       childId: planFormData.childId || children[0]?.id || 1,
       title: selectedActivity.name,
-      date: planFormData.date,
-      parent: "A", // Default parent
-      type: selectedActivity.type as any,
+      startDate: planFormData.date,
+      endDate: planFormData.date,
+      startTime,
+      endTime,
+      timeZone: "Europe/Oslo",
+      parent: "A",
+      type: eventType,
       description: selectedActivity.description,
-      location: "",
+      location: address || location,
+      recurrence: null,
+      recurrenceInterval: 1,
+      recurrenceEnd: null,
+      recurrenceDays: null,
     });
   };
 
@@ -560,12 +618,12 @@ export default function ActivitiesPage() {
                 <Card key={activity.id} className="overflow-hidden border-none shadow-md soft-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col h-full">
                   <div className="relative h-48 shrink-0">
                     <img
-                      src={activity.image || "https://images.unsplash.com/photo-1503095396549-807759245b35?w=400"}
+                      src={activity.image || "https://picsum.photos/id/237/400/300"}
                       alt={activity.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = "https://images.unsplash.com/photo-1503095396549-807759245b35?w=400";
+                        target.src = "https://picsum.photos/id/237/400/300";
                       }}
                     />
                     <Button size="icon" variant="secondary" className="absolute top-2 right-2 rounded-full w-8 h-8 bg-white/80 hover:bg-white text-red-500">
@@ -606,7 +664,9 @@ export default function ActivitiesPage() {
                       onClick={() => handleAddToPlan({
                         name: activity.name,
                         description: activity.description,
-                        type: "activity"
+                        type: "activity",
+                        address: activity.address,
+                        location: activity.address
                       })}
                     >
                       <Calendar className="w-4 h-4 mr-2" />
@@ -636,7 +696,7 @@ export default function ActivitiesPage() {
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = "https://images.unsplash.com/photo-1503095396549-807759245b35?w=400";
+                        target.src = "https://picsum.photos/id/237/400/300";
                       }}
                     />
                     <Badge className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-md text-white border-none">
@@ -682,7 +742,9 @@ export default function ActivitiesPage() {
                       onClick={() => handleAddToPlan({
                         name: event.name,
                         description: event.description,
-                        type: "city-event"
+                        type: "city-event",
+                        location: event.location,
+                        time: event.time
                       })}
                     >
                       <Calendar className="w-4 h-4 mr-2" />
@@ -710,12 +772,12 @@ export default function ActivitiesPage() {
               <Card key={activity.id} className="overflow-hidden border-none shadow-md soft-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col h-full">
                 <div className="relative h-48 shrink-0">
                   <img
-                    src={activity.image || "https://images.unsplash.com/photo-1503095396549-807759245b35?w=400"}
+                    src={activity.image || "https://picsum.photos/id/237/400/300"}
                     alt={activity.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = "https://images.unsplash.com/photo-1503095396549-807759245b35?w=400";
+                      target.src = "https://picsum.photos/id/237/400/300";
                     }}
                   />
                   <Button size="icon" variant="secondary" className="absolute top-2 right-2 rounded-full w-8 h-8 bg-white/80 hover:bg-white text-red-500">
@@ -780,15 +842,40 @@ export default function ActivitiesPage() {
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="plan-time">Time (optional)</Label>
-                  <Input
-                    id="plan-time"
-                    type="time"
-                    value={planFormData.time}
-                    onChange={(e) => setPlanFormData({ ...planFormData, time: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="plan-start-time">Start Time</Label>
+                    <Input
+                      id="plan-start-time"
+                      type="time"
+                      value={planFormData.startTime}
+                      onChange={(e) => setPlanFormData({ ...planFormData, startTime: e.target.value })}
+                      placeholder="09:00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="plan-end-time">End Time</Label>
+                    <Input
+                      id="plan-end-time"
+                      type="time"
+                      value={planFormData.endTime}
+                      onChange={(e) => setPlanFormData({ ...planFormData, endTime: e.target.value })}
+                      placeholder="11:00"
+                    />
+                  </div>
                 </div>
+                {(selectedActivity as any)?.address && (
+                  <div className="space-y-2">
+                    <Label>Address</Label>
+                    <p className="text-sm text-muted-foreground">{(selectedActivity as any).address}</p>
+                  </div>
+                )}
+                {(selectedActivity as any)?.location && !(selectedActivity as any)?.address && (
+                  <div className="space-y-2">
+                    <Label>Location</Label>
+                    <p className="text-sm text-muted-foreground">{(selectedActivity as any).location}</p>
+                  </div>
+                )}
                 {children.length > 0 && (
                   <div className="space-y-2">
                     <Label htmlFor="plan-child">Child (optional)</Label>
@@ -838,7 +925,7 @@ export default function ActivitiesPage() {
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
-                      target.src = "https://images.unsplash.com/photo-1503095396549-807759245b35?w=400";
+                      target.src = "https://picsum.photos/id/237/400/300";
                     }}
                   />
                 </div>

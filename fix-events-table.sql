@@ -1,6 +1,8 @@
--- Run this in your Supabase SQL Editor to create the events table
+-- First, drop the existing events table if it exists
+DROP TABLE IF EXISTS events CASCADE;
 
-CREATE TABLE IF NOT EXISTS events (
+-- Now create the events table with the correct schema
+CREATE TABLE events (
   id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
   child_id INTEGER,
   title TEXT NOT NULL,
@@ -23,12 +25,12 @@ CREATE TABLE IF NOT EXISTS events (
 -- Enable Row Level Security
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
--- Allow all operations (for demo purposes - tighten this in production)
+-- Allow all operations (for demo purposes)
 CREATE POLICY "Enable all access for events" ON events
   FOR ALL
   USING (true)
   WITH CHECK (true);
 
--- Create index for faster queries
+-- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_events_start_date ON events(start_date);
 CREATE INDEX IF NOT EXISTS idx_events_child_id ON events(child_id);

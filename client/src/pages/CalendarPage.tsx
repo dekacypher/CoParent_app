@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Layout from "@/components/Layout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getEvents, getChildren, createEvent, updateEvent, deleteEvent } from "@/lib/api";
+import { supabaseApi } from "@/lib/supabase";
 import { format, parseISO, startOfYear, endOfYear, eachMonthOfInterval, getDay, getDaysInMonth, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
-import { Plus, Edit, Trash2, Calendar as CalendarIcon, Download, Upload, Share2, Filter, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar as CalendarIcon, Download, Upload, Share2, Filter, X, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Event, InsertEvent } from "@shared/schema";
 import { readICSFile, validateICSFile, convertICSEventsToEvents } from "@/lib/ics-parser";
@@ -34,7 +34,30 @@ export default function CalendarPage() {
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ["events"],
-    queryFn: () => getEvents()
+    queryFn: async () => {
+      const { data, error } = await supabaseApi.getEvents();
+      if (error) throw error;
+      // Transform Supabase snake_case to camelCase for compatibility
+      return data?.map(e => ({
+        id: e.id,
+        childId: e.child_id,
+        title: e.title,
+        startDate: e.start_date,
+        endDate: e.end_date,
+        startTime: e.start_time,
+        endTime: e.end_time,
+        timeZone: e.time_zone,
+        parent: e.parent,
+        type: e.type,
+        recurrence: e.recurrence,
+        recurrenceInterval: e.recurrence_interval,
+        recurrenceEnd: e.recurrence_end,
+        recurrenceDays: e.recurrence_days,
+        description: e.description,
+        location: e.location,
+        createdAt: e.created_at,
+      })) || [];
+    }
   });
 
   // Filter events
@@ -185,7 +208,25 @@ export default function CalendarPage() {
 
       for (const eventData of convertedEvents) {
         try {
-          await createEvent(eventData);
+          // Transform to Supabase format
+          const supabaseEvent = {
+            child_id: eventData.childId || null,
+            title: eventData.title,
+            start_date: eventData.startDate,
+            end_date: eventData.endDate,
+            start_time: eventData.startTime,
+            end_time: eventData.endTime,
+            time_zone: eventData.timeZone,
+            parent: eventData.parent,
+            type: eventData.type,
+            recurrence: eventData.recurrence || null,
+            recurrence_interval: eventData.recurrenceInterval || 1,
+            recurrence_end: eventData.recurrenceEnd || null,
+            recurrence_days: eventData.recurrenceDays || null,
+            description: eventData.description || null,
+            location: eventData.location || null,
+          };
+          await supabaseApi.createEvent(supabaseEvent);
           successCount++;
         } catch (error) {
           console.error('Error creating event:', error);
@@ -215,7 +256,11 @@ export default function CalendarPage() {
 
   const { data: children = [] } = useQuery({
     queryKey: ["children"],
-    queryFn: getChildren,
+    queryFn: async () => {
+      const { data, error } = await supabaseApi.getChildren();
+      if (error) throw error;
+      return data || [];
+    }
   });
 
   const [formData, setFormData] = useState<Partial<InsertEvent>>({
@@ -242,7 +287,29 @@ export default function CalendarPage() {
   const [showRepeatOptions, setShowRepeatOptions] = useState(false);
 
   const createMutation = useMutation({
-    mutationFn: createEvent,
+    mutationFn: async (event: any) => {
+      // Transform camelCase to snake_case for Supabase
+      const supabaseEvent = {
+        child_id: event.childId || null,
+        title: event.title,
+        start_date: event.startDate,
+        end_date: event.endDate,
+        start_time: event.startTime,
+        end_time: event.endTime,
+        time_zone: event.timeZone,
+        parent: event.parent,
+        type: event.type,
+        recurrence: event.recurrence || null,
+        recurrence_interval: event.recurrenceInterval || 1,
+        recurrence_end: event.recurrenceEnd || null,
+        recurrence_days: event.recurrenceDays || null,
+        description: event.description || null,
+        location: event.location || null,
+      };
+      const { data, error } = await supabaseApi.createEvent(supabaseEvent);
+      if (error) throw error;
+      return data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       toast({
@@ -262,8 +329,29 @@ export default function CalendarPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<Event> }) =>
-      updateEvent(id, data),
+    mutationFn: async ({ id, data }: { id: number; data: Partial<Event> }) => {
+      // Transform camelCase to snake_case for Supabase
+      const supabaseUpdates: any = {};
+      if (data.childId !== undefined) supabaseUpdates.child_id = data.childId;
+      if (data.title !== undefined) supabaseUpdates.title = data.title;
+      if (data.startDate !== undefined) supabaseUpdates.start_date = data.startDate;
+      if (data.endDate !== undefined) supabaseUpdates.end_date = data.endDate;
+      if (data.startTime !== undefined) supabaseUpdates.start_time = data.startTime;
+      if (data.endTime !== undefined) supabaseUpdates.end_time = data.endTime;
+      if (data.timeZone !== undefined) supabaseUpdates.time_zone = data.timeZone;
+      if (data.parent !== undefined) supabaseUpdates.parent = data.parent;
+      if (data.type !== undefined) supabaseUpdates.type = data.type;
+      if (data.recurrence !== undefined) supabaseUpdates.recurrence = data.recurrence;
+      if (data.recurrenceInterval !== undefined) supabaseUpdates.recurrence_interval = data.recurrenceInterval;
+      if (data.recurrenceEnd !== undefined) supabaseUpdates.recurrence_end = data.recurrenceEnd;
+      if (data.recurrenceDays !== undefined) supabaseUpdates.recurrence_days = data.recurrenceDays;
+      if (data.description !== undefined) supabaseUpdates.description = data.description;
+      if (data.location !== undefined) supabaseUpdates.location = data.location;
+
+      const { data: result, error } = await supabaseApi.updateEvent(id, supabaseUpdates);
+      if (error) throw error;
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       toast({
@@ -272,10 +360,21 @@ export default function CalendarPage() {
       });
       closeDialog();
     },
+    onError: (error: any) => {
+      console.error("Event update error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error updating event",
+        description: error?.message || "Failed to update event. Please try again.",
+      });
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteEvent,
+    mutationFn: async (id: number) => {
+      const { error } = await supabaseApi.deleteEvent(id);
+      if (error) throw error;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });
       toast({
@@ -283,6 +382,14 @@ export default function CalendarPage() {
         description: "The event has been removed from the calendar.",
       });
       closeDialog();
+    },
+    onError: (error: any) => {
+      console.error("Event deletion error:", error);
+      toast({
+        variant: "destructive",
+        title: "Error deleting event",
+        description: error?.message || "Failed to delete event. Please try again.",
+      });
     },
   });
 
@@ -308,6 +415,9 @@ export default function CalendarPage() {
       recurrenceDays: "[]",
       description: "",
       location: "",
+      address: "",
+      city: "",
+      postalCode: "",
     });
   };
 
@@ -319,7 +429,7 @@ export default function CalendarPage() {
     });
 
     if (existingEvent) {
-      // Edit existing event
+      // Edit existing event - handle fields that may not exist in Supabase
       setSelectedEvent(existingEvent);
       setFormData({
         childId: existingEvent.childId,
@@ -337,9 +447,10 @@ export default function CalendarPage() {
         recurrenceDays: existingEvent.recurrenceDays || "[]",
         description: existingEvent.description || "",
         location: existingEvent.location || "",
-        address: existingEvent.address || "",
-        city: existingEvent.city || "",
-        postalCode: existingEvent.postalCode || "",
+        // These fields don't exist in Supabase events table, default to empty string
+        address: (existingEvent as any).address || "",
+        city: (existingEvent as any).city || "",
+        postalCode: (existingEvent as any).postalCode || "",
       });
       setIsEditMode(true);
       setIsDialogOpen(true);
@@ -360,9 +471,9 @@ export default function CalendarPage() {
     e.preventDefault();
 
     // Prepare event data with proper defaults
-    // Don't send childId if it's "all" (undefined or 0)
-    // Don't send recurrence fields if they're default/empty values
-    const { childId, recurrence, recurrenceEnd, recurrenceDays, ...restFormData } = formData;
+    // Exclude fields not in Supabase schema: address, city, postalCode
+    const { childId, recurrence, recurrenceEnd, recurrenceDays, address, city, postalCode, ...restFormData } = formData;
+
     const eventData = {
       ...restFormData,
       ...(childId && childId !== 0 ? { childId } : {}), // Only include childId if it's a valid number
@@ -377,6 +488,15 @@ export default function CalendarPage() {
       ...(recurrenceEnd ? { recurrenceEnd } : {}),
       ...(recurrenceDays && recurrenceDays !== "[]" ? { recurrenceDays } : {}),
     };
+
+    // Combine address info into description if present
+    if (address || city || postalCode) {
+      const addressParts = [address, city, postalCode].filter(Boolean);
+      const currentDescription = eventData.description || "";
+      eventData.description = currentDescription
+        ? `${currentDescription}\n\nAddress: ${addressParts.join(", ")}`
+        : `Address: ${addressParts.join(", ")}`;
+    }
 
     console.log("Submitting event data:", eventData);
 
@@ -637,7 +757,7 @@ export default function CalendarPage() {
                         setFormData({
                           ...formData,
                           startDate: newStartDate,
-                          endDate: formData.endDate && formData.endDate < formData.startDate
+                          endDate: formData.endDate && formData.startDate && formData.endDate < formData.startDate
                             ? newStartDate
                             : formData.endDate
                         });

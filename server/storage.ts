@@ -154,11 +154,11 @@ export class DatabaseStorage implements IStorage {
   // Events methods
   async getEvents(childId?: number, startDate?: string, endDate?: string): Promise<Event[]> {
     let query = db.select().from(events);
-    
+
     const conditions = [];
     if (childId) conditions.push(eq(events.childId, childId));
-    if (startDate) conditions.push(gte(events.date, startDate));
-    if (endDate) conditions.push(lte(events.date, endDate));
+    if (startDate) conditions.push(gte(events.startDate, startDate));
+    if (endDate) conditions.push(lte(events.startDate, endDate));
 
     if (conditions.length > 0) {
       return query.where(and(...conditions));
