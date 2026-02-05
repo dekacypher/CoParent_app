@@ -135,16 +135,29 @@ export default function ActivitiesPage() {
 
           // Get city name from coordinates (reverse geocoding)
           try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
             const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.latitude}&lon=${location.longitude}`
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.latitude}&lon=${location.longitude}`,
+              { signal: controller.signal }
             );
-            const data = await response.json();
-            setUserLocation({
-              ...location,
-              city: data.address.city || data.address.town || data.address.village || "Unknown",
-            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const data = await response.json();
+              const city = data.address?.city || data.address?.town || data.address?.village ||
+                           data.address?.suburb || data.address?.county || "Your area";
+              setUserLocation({
+                ...location,
+                city,
+              });
+            } else {
+              setUserLocation({ ...location, city: "Your area" });
+            }
           } catch (error) {
             console.error("Error getting city name:", error);
+            setUserLocation({ ...location, city: "Your area" });
           }
 
           // Fetch nearby activities
@@ -220,6 +233,10 @@ export default function ActivitiesPage() {
       const radius = 16093; // 10 miles in meters
       const { latitude, longitude } = location;
 
+      // Create abort controller with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
       // Overpass API query for kid-friendly places
       const query = `
         [out:json][timeout:25];
@@ -241,10 +258,14 @@ export default function ActivitiesPage() {
       const response = await fetch('https://overpass-api.de/api/interpreter', {
         method: 'POST',
         body: query,
-        signal: AbortSignal.timeout(10000), // 10 second timeout
+        signal: controller.signal,
       });
 
-      if (!response.ok) throw new Error('Failed to fetch nearby places');
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Overpass API returned ${response.status}: ${response.statusText}`);
+      }
 
       const data = await response.json();
 
@@ -307,9 +328,24 @@ export default function ActivitiesPage() {
           description: "Try expanding your search radius or check back later.",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching nearby activities:", error);
-      // Don't show error toast - just silently use fallback activities
+
+      // Show helpful error message based on what went wrong
+      let errorMessage = "Unable to fetch nearby activities. Please try again later.";
+
+      if (error.name === 'AbortError') {
+        errorMessage = "Request timed out. The location service is taking too long to respond.";
+      } else if (error.message?.includes('Failed to fetch') || error.message?.includes('NetworkError')) {
+        errorMessage = "Network error. Please check your internet connection.";
+      }
+
+      toast({
+        variant: "destructive",
+        title: "Location services unavailable",
+        description: errorMessage,
+      });
+
       // Set empty array so the section doesn't show
       setNearbyActivities([]);
     }
