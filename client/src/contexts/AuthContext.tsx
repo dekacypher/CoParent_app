@@ -43,9 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         navigate('/login');
       }
 
-      // Redirect to home on sign in (if on login/register page)
+      // Redirect to dashboard on sign in (if on login/register page)
       if (_event === 'SIGNED_IN' && (location === '/login' || location === '/register')) {
-        navigate('/');
+        navigate('/dashboard');
       }
     });
 
@@ -65,15 +65,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     metadata?: { username?: string; role?: string }
   ) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata,
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    return { error };
+    try {
+      // Sign up with email confirmation
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        // Log error for debugging
+        console.error('Sign up error:', error);
+
+        // Provide helpful error messages
+        if (error.message.includes('User already registered')) {
+          return {
+            error: {
+              message: "An account with this email already exists. Please try logging in or use a different email address.",
+              name: error.name,
+            } as AuthError,
+          };
+        }
+
+        return { error };
+      }
+
+      // Success - check if email confirmation is needed
+      if (data.user && !data.user.email_confirmed_at) {
+        // Email confirmation is required
+        console.log('User created, email confirmation required');
+        return {
+          error: {
+            message: "Account created! Please check your email inbox (and spam folder) for a verification link. Click the link to activate your account.",
+            name: "EmailNotConfirmed",
+            userCreated: true,
+          } as AuthError,
+        };
+      }
+
+      // Email confirmation disabled - user is ready to login
+      return { error: null };
+    } catch (e: any) {
+      console.error('Sign up exception:', e);
+      return {
+        error: {
+          message: e.message || "An unexpected error occurred. Please try again.",
+          name: "SignUpError",
+        } as AuthError,
+      };
+    }
   };
 
   const signOut = async () => {

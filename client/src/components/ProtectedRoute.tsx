@@ -46,7 +46,7 @@ export function PublicRoute({ children }: PublicRouteProps) {
   }
 
   if (user) {
-    return <Redirect to="/" />;
+    return <Redirect to="/dashboard" />;
   }
 
   return <>{children}</>;

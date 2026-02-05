@@ -1,0 +1,50 @@
+[build]
+  # Build command for the React frontend
+  command = "npm install && npm run build"
+  # Publish directory (where the built files are)
+  publish = "dist/public"
+
+  # Functions directory (if using Netlify Functions for API)
+  # functions = "netlify/functions"
+
+[[redirects]]
+  # SPA fallback - redirect all routes to index.html
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# [[redirects]]
+#   # API proxy - redirect API calls to backend
+#   from = "/api/*"
+#   to = "https://your-backend-api-url.com/api/:splat"
+#   status = 200
+#   force = true
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(self), microphone=(), camera=(), payment=()"
+
+[[headers]]
+  for = "*.js"
+  [headers.values]
+    Content-Type = "application/javascript; charset=utf-8"
+
+[[headers]]
+  for = "*.css"
+  [headers.values]
+    Content-Type = "text/css; charset=utf-8"
+
+[dev]
+  command = "npm run dev"
+  port = 5173
+  targetPort = 5173
+  autoLaunch = false

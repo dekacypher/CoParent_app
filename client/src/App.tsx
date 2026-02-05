@@ -6,7 +6,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
+import { GoogleAuthProvider } from "@/components/GoogleAuthProvider";
 import NotFound from "@/pages/not-found";
+import LandingPage from "@/pages/LandingPage";
+import DebugAuth from "@/pages/DebugAuth";
 import Home from "@/pages/Home";
 import CalendarPage from "@/pages/CalendarPage";
 import ActivitiesPage from "@/pages/ActivitiesPage";
@@ -22,61 +25,63 @@ import SettingsPage from "@/pages/SettingsPage";
 function Router() {
   return (
     <Switch>
-      <Route path="/login" component={() => (
-        <PublicRoute>
-          <LoginPage />
-        </PublicRoute>
-      )} />
-      <Route path="/register" component={() => (
-        <PublicRoute>
-          <RegisterPage />
-        </PublicRoute>
-      )} />
-      <Route path="/" component={() => (
+      <Route path="/" component={LandingPage} />
+      <Route path="/dashboard">
         <ProtectedRoute>
           <Home />
         </ProtectedRoute>
-      )} />
-      <Route path="/calendar" component={() => (
+      </Route>
+      <Route path="/calendar">
         <ProtectedRoute>
           <CalendarPage />
         </ProtectedRoute>
-      )} />
-      <Route path="/messages" component={() => (
+      </Route>
+      <Route path="/messages">
         <ProtectedRoute>
           <MessagesPage />
         </ProtectedRoute>
-      )} />
-      <Route path="/expenses" component={() => (
+      </Route>
+      <Route path="/expenses">
         <ProtectedRoute>
           <ExpensesPage />
         </ProtectedRoute>
-      )} />
-      <Route path="/documents" component={() => (
+      </Route>
+      <Route path="/documents">
         <ProtectedRoute>
           <DocumentsPage />
         </ProtectedRoute>
-      )} />
-      <Route path="/activities" component={() => (
+      </Route>
+      <Route path="/activities">
         <ProtectedRoute>
           <ActivitiesPage />
         </ProtectedRoute>
-      )} />
-      <Route path="/social" component={() => (
+      </Route>
+      <Route path="/social">
         <ProtectedRoute>
           <SocialPage />
         </ProtectedRoute>
-      )} />
-      <Route path="/education" component={() => (
+      </Route>
+      <Route path="/education">
         <ProtectedRoute>
           <EducationPage />
         </ProtectedRoute>
-      )} />
-      <Route path="/settings" component={() => (
+      </Route>
+      <Route path="/settings">
         <ProtectedRoute>
           <SettingsPage />
         </ProtectedRoute>
-      )} />
+      </Route>
+      <Route path="/login">
+        <PublicRoute>
+          <LoginPage />
+        </PublicRoute>
+      </Route>
+      <Route path="/register">
+        <PublicRoute>
+          <RegisterPage />
+        </PublicRoute>
+      </Route>
+      <Route path="/debug-auth" component={DebugAuth} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -85,14 +90,16 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ThemeProvider>
-          <TooltipProvider delayDuration={0}>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </ThemeProvider>
-      </AuthProvider>
+      <GoogleAuthProvider>
+        <AuthProvider>
+          <ThemeProvider>
+            <TooltipProvider delayDuration={0}>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </GoogleAuthProvider>
     </QueryClientProvider>
   );
 }
