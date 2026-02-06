@@ -53,6 +53,7 @@ export default function ActivitySuggestions() {
 
   const handleAddToPlan = (activity: typeof SUGGESTED_ACTIVITIES[0]) => {
     const eventData = {
+      childId: 1, // Default to first child if no child selected (child_id is NOT NULL in database)
       title: activity.title,
       startDate: new Date().toISOString().split('T')[0],
       endDate: new Date().toISOString().split('T')[0],

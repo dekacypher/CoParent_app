@@ -65,6 +65,7 @@ export default function ActivitiesPage() {
     endTime: "",
     childId: 0,
   });
+  const [activityImages, setActivityImages] = useState<Record<string, string>>({});
 
   const { data: activities = [], isLoading } = useQuery({
     queryKey: ["activities"],
@@ -201,6 +202,64 @@ export default function ActivitiesPage() {
     return R * c;
   };
 
+  // Fetch real image from Wikipedia for a place
+  const fetchRealPlaceImage = async (placeName: string, category: string, city: string): Promise<string | null> => {
+    try {
+      // Try multiple search strategies
+      const searchQueries = [
+        `${placeName} ${city}`,
+        `${placeName} ${category}`,
+        placeName,
+        `${placeName} building`,
+      ];
+
+      for (const query of searchQueries) {
+        try {
+          const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=3&prop=pageimages|pageterms&piprop=original&pithumbsize=600&format=json&origin=*`;
+          const response = await fetch(searchUrl);
+
+          if (response.ok) {
+            const data = await response.json();
+            const pages = data.query?.pages;
+
+            if (pages) {
+              // Find the most relevant page with an image
+              for (const page of Object.values(pages)) {
+                const p = page as any;
+                if (p?.thumbnail?.source && p?.terms?.description?.[0]) {
+                  // Check if description is relevant
+                  const desc = p.terms.description[0].toLowerCase();
+                  const placeLower = placeName.toLowerCase();
+
+                  if (desc.includes(category.toLowerCase()) ||
+                      desc.includes(placeLower) ||
+                      desc.includes('building') ||
+                      desc.includes('place')) {
+                    return p.thumbnail.source;
+                  }
+                }
+              }
+
+              // Fallback to first page with image
+              for (const page of Object.values(pages)) {
+                const p = page as any;
+                if (p?.thumbnail?.source) {
+                  return p.thumbnail.source;
+                }
+              }
+            }
+          }
+        } catch {
+          continue; // Try next query
+        }
+      }
+    } catch (error) {
+      console.log(`Failed to fetch Wikipedia image for ${placeName}:`, error);
+    }
+
+    return null;
+  };
+
   // Categorize place types
   const categorizePlace = (tags: any): string => {
     if (tags.leisure === "playground" || tags.leisure === "park" || tags.natural === "park") return "Outdoor";
@@ -211,19 +270,26 @@ export default function ActivitiesPage() {
     return "Outdoor";
   };
 
-  // Get appropriate image for the specific place (not generic)
-  const getPlaceImage = (category: string, name: string, index: number): string => {
-    // Create a unique hash based on the place name to get a consistent image for that place
+  // Synchronous version for initial render (will be updated by async fetch)
+  const getPlaceholderImage = (category: string, name: string, index: number): string => {
+    // Category-based images from Lorem Picsum with consistent hash
+    const categoryImageIds: Record<string, number[]> = {
+      'Outdoor': [237, 238, 239, 240, 241, 242, 243, 244, 245, 246], // Nature/outdoor
+      'Educational': [25, 26, 27, 28, 29, 30, 31, 32, 33, 34], // Library/museum
+      'Sports': [100, 101, 102, 103, 104, 105, 106, 107, 108, 109], // Sports
+      'Arts & Crafts': [50, 51, 52, 53, 54, 55, 56, 57, 58, 59], // Art
+      'Entertainment': [150, 151, 152, 153, 154, 155, 156, 157, 158, 159] // Theater/cinema
+    };
+
+    const imageIds = categoryImageIds[category] || categoryImageIds['Outdoor'];
     let hash = 0;
-    const str = name.toLowerCase().replace(/\s+/g, '-');
+    const str = name.toLowerCase();
     for (let i = 0; i < str.length; i++) {
       hash = ((hash << 5) - hash) + str.charCodeAt(i);
       hash = hash & hash;
     }
 
-    // Use a wide range of images (10-1000) to ensure variety
-    const imageId = 10 + Math.abs(hash) % 990;
-
+    const imageId = imageIds[Math.abs(hash) % imageIds.length];
     return `https://picsum.photos/id/${imageId}/400/300`;
   };
 
@@ -312,7 +378,7 @@ export default function ActivitiesPage() {
             address,
             distance: Math.round(distance * 10) / 10,
             rating: undefined,
-            image: getPlaceImage(category, element.tags.name, index),
+            image: getPlaceholderImage(category, element.tags.name, index),
             city: location.city || "Unknown",
           };
         })
@@ -321,6 +387,14 @@ export default function ActivitiesPage() {
         .slice(0, 20); // Limit to 20 results
 
       setNearbyActivities(activities);
+
+      // Fetch real images for each activity from Wikipedia
+      activities.forEach(async (activity) => {
+        const realImage = await fetchRealPlaceImage(activity.name, activity.category, activity.city || location.city || "");
+        if (realImage) {
+          setActivityImages(prev => ({ ...prev, [activity.id]: realImage }));
+        }
+      });
 
       if (activities.length === 0) {
         toast({
@@ -654,12 +728,12 @@ export default function ActivitiesPage() {
                 <Card key={activity.id} className="overflow-hidden border-none shadow-md soft-shadow hover:translate-y-[-4px] transition-all duration-300 flex flex-col h-full">
                   <div className="relative h-48 shrink-0">
                     <img
-                      src={activity.image || "https://picsum.photos/id/237/400/300"}
+                      src={activityImages[activity.id] || activity.image || "https://picsum.photos/id/237/400/300"}
                       alt={activity.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = "https://picsum.photos/id/237/400/300";
+                        target.src = activity.image || "https://picsum.photos/id/237/400/300";
                       }}
                     />
                     <Button size="icon" variant="secondary" className="absolute top-2 right-2 rounded-full w-8 h-8 bg-white/80 hover:bg-white text-red-500">
